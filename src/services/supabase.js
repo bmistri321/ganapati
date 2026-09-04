@@ -23,7 +23,7 @@ export const sendWhatsAppOtp = async (phone, otp) => {
   let formattedPhone = phone.replace(/[^0-9]/g, '');
   if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
 
-  const url = 'https://graph.facebook.com/v21.0/1258313577369410/messages';
+  const url = 'https://graph.facebook.com/v21.0/1202182692988334/messages';
   const token = 'EAAY8LkWvYLcBSQFCgBTUp7StgPTU9qBXxGAdlD1mthALTOlkZAerq6CY9JewYO9WTzdHdbE5o9oZCDChyPkq5wsh0xZAGTrEYWhdwZATQvUtJ6Hh6c6InKszieDLtGJtTmcaHuPDZBZBbZBO76dCjBeyKhP4buI4NUsDZCr1IfBWxEBjL3gypbiJ1s7QJNvAXwZDZD';
 
   const payload = {
