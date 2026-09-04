@@ -53,7 +53,7 @@ export const CartDrawer = () => {
           {/* Header */}
           <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <ShoppingBag className="w-5 h-5" />
               </div>
               <div>
@@ -75,7 +75,7 @@ export const CartDrawer = () => {
               )}
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-2 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -108,7 +108,7 @@ export const CartDrawer = () => {
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             {cartItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-                <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400">
+                <div className="w-16 h-16 rounded bg-slate-100 flex items-center justify-center text-slate-400">
                   <ShoppingBag className="w-8 h-8" />
                 </div>
                 <div>
@@ -119,7 +119,7 @@ export const CartDrawer = () => {
                 </div>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm transition-all"
                 >
                   Start Browsing
                 </button>
@@ -130,10 +130,10 @@ export const CartDrawer = () => {
                 return (
                   <div
                     key={item.id}
-                    className="flex gap-3.5 p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-all"
+                    className="flex gap-3.5 p-3 rounded bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-all"
                   >
                     {/* Thumbnail */}
-                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200/60">
+                    <div className="w-20 h-20 rounded overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200/60">
                       {item.image ? (
                         <img
                           src={item.image}
@@ -166,7 +166,7 @@ export const CartDrawer = () => {
 
                       <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-200/50">
                         {/* Stepper */}
-                        <div className="flex items-center border border-slate-200 rounded-lg bg-white">
+                        <div className="flex items-center border border-slate-300 rounded bg-white">
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1, item.stock)}
                             className="p-1 text-slate-600 hover:text-slate-900"
@@ -223,14 +223,14 @@ export const CartDrawer = () => {
 
               <button
                 onClick={handleProceedToCheckout}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-5 rounded-2xl text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-98"
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-5 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98"
               >
-                <span>Proceed to Guest Checkout</span>
+                <span>Proceed to Cash on Delivery</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <p className="text-[11px] text-center text-slate-400">
-                🔒 No account needed &bull; Order sent directly to WhatsApp
+                🔒 Safe & Secure &bull; Cash on Delivery &bull; Instant WhatsApp Dispatch
               </p>
             </div>
           )}

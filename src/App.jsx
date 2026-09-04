@@ -26,6 +26,9 @@ import {
 import { smartSearchProducts } from './utils/searchHelper';
 import { CategorySidebar } from './components/CategorySidebar';
 import { CategoryShelf } from './components/CategoryShelf';
+import { WhatsAppLoginModal } from './components/WhatsAppLoginModal';
+import { MyOrdersModal } from './components/MyOrdersModal';
+import { CustomerProfileModal } from './components/CustomerProfileModal';
 
 export function App() {
   const { settings } = useSettings();
@@ -125,40 +128,40 @@ export function App() {
       ) : (
         <>
           {/* Hero Section */}
-          <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+          <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 text-white py-10 sm:py-14 px-4 sm:px-6 lg:px-8">
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
             
             <div className="max-w-7xl mx-auto relative z-10">
-              <div className="max-w-3xl space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold backdrop-blur-md">
+              <div className="max-w-3xl space-y-3 sm:space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold backdrop-blur-md">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Real-Time Inventory &bull; Instant WhatsApp Dispatch</span>
+                  <span>Real-Time Inventory &bull; WhatsApp OTP Login &bull; Cash on Delivery</span>
                 </div>
 
-                <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white">
-                  Effortless Shopping,{' '}
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white">
+                  Fast & Seamless Shopping,{' '}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-                    Zero Friction Checkout.
+                    Direct WhatsApp Dispatch.
                   </span>
                 </h1>
 
-                <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
-                  Select your gear from our live stock, pinpoint your delivery map, and place orders directly to WhatsApp without creating an account.
+                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
+                  Browse our verified stock, pinpoint your exact GPS location on the interactive map, and place Cash on Delivery orders with instant WhatsApp confirmation.
                 </p>
 
                 {/* Value Props */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 text-xs font-medium text-slate-300">
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-3 rounded backdrop-blur-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 pt-2 text-xs font-medium text-slate-300">
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded backdrop-blur-xs">
                     <MessageCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                    <span>Instant WhatsApp Order</span>
+                    <span>WhatsApp OTP Auth</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-3 rounded backdrop-blur-sm">
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded backdrop-blur-xs">
                     <Truck className="w-4 h-4 text-teal-400 flex-shrink-0" />
-                    <span>Precise GPS Pinpoint</span>
+                    <span>GPS Map Delivery Pin</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-3 rounded backdrop-blur-sm col-span-2 sm:col-span-1">
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded backdrop-blur-xs col-span-2 sm:col-span-1">
                     <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                    <span>Live Firestore Backup</span>
+                    <span>Cash on Delivery (COD)</span>
                   </div>
                 </div>
               </div>
@@ -300,7 +303,7 @@ export function App() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 sm:hidden animate-slide-up">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded font-bold text-sm shadow-xl shadow-emerald-600/30 active:scale-95"
+            className="flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded font-bold text-xs uppercase tracking-wider shadow-xl shadow-emerald-600/30 active:scale-95"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>View Cart ({totalItemsCount})</span>
@@ -309,15 +312,15 @@ export function App() {
       )}
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200/80 mt-16 py-10 px-4 sm:px-6 lg:px-8">
+      <footer className="bg-white border-t border-slate-200/80 mt-16 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-800">{settings.storeName}</span>
             <span>&bull;</span>
-            <span>Frictionless WhatsApp Ordering System</span>
+            <span>WhatsApp OTP & Cash on Delivery (COD) Storefront</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
-            <span>Built with React, Tailwind & Firebase</span>
+            <span>Direct WhatsApp Quick Dispatch</span>
           </div>
         </div>
       </footer>
@@ -333,6 +336,12 @@ export function App() {
         orderDetails={latestOrderInfo}
         onClose={() => setLatestOrderInfo(null)}
       />
+
+      <WhatsAppLoginModal />
+
+      <MyOrdersModal />
+
+      <CustomerProfileModal />
     </div>
   );
 }

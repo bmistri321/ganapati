@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CheckCircle2, MessageCircle, Copy, Check, ExternalLink, ArrowRight, Database, MapPin, Store } from 'lucide-react';
+import { CheckCircle2, MessageCircle, Copy, Check, ExternalLink, ArrowRight, Database, MapPin, Store, Download, FileText } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { generateTaxInvoicePDF } from '../utils/invoiceGenerator';
 
 export const OrderSuccessModal = ({ orderDetails, onClose }) => {
   const { settings } = useSettings();
@@ -20,96 +21,86 @@ export const OrderSuccessModal = ({ orderDetails, onClose }) => {
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md transition-opacity animate-fade-in" />
+  const handleDownloadInvoice = () => {
+    generateTaxInvoicePDF(order, settings);
+  };
 
-      {/* Card */}
-      <div className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden z-10 animate-slide-up border border-emerald-100 my-auto p-6 sm:p-8 text-center space-y-6">
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in" />
+
+      {/* Modern White Minimalist Card */}
+      <div className="relative bg-white rounded shadow-2xl max-w-lg w-full overflow-hidden z-10 animate-slide-up border border-slate-200/90 my-auto p-6 sm:p-8 text-center space-y-6">
         
-        {/* Animated Celebration Icon */}
-        <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-xl shadow-emerald-500/30 animate-pulse-subtle">
-          <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12" />
+        {/* Celebration Icon */}
+        <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shadow-xs">
+          <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600" />
         </div>
 
         {/* Title */}
         <div className="space-y-1.5">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Order Submitted Successfully!
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            Order Submitted (Cash on Delivery)
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600">
-            Thank you, <span className="font-semibold text-slate-900">{order.customer.name}</span>. Your order has been registered and prepared for WhatsApp transmission.
+          <p className="text-xs text-slate-500">
+            Thank you, <strong className="text-slate-800">{order.customer?.name}</strong>. Your order has been registered and scheduled for dispatch.
           </p>
         </div>
 
         {/* Order Details Receipt Card */}
-        <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/80 text-left space-y-3 text-xs">
-          <div className="flex items-center justify-between border-b border-slate-200/70 pb-2.5">
-            <span className="text-slate-500 font-medium">Order Reference:</span>
+        <div className="bg-slate-50 rounded p-4 border border-slate-200 text-left space-y-2.5 text-xs">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Order Reference:</span>
             <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
-              {order.orderId}
+              {order.orderId || order.invoice_number}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 font-medium">Fulfillment Type:</span>
-            <span className="font-semibold text-slate-800 flex items-center gap-1">
-              {order.deliveryMethod === 'shipping' ? (
-                <>
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" /> Home Delivery
-                </>
-              ) : (
-                <>
-                  <Store className="w-3.5 h-3.5 text-emerald-600" /> Store Pickup
-                </>
-              )}
+            <span className="text-slate-500 font-medium">Payment Mode:</span>
+            <span className="font-bold text-slate-800">
+              Cash on Delivery (COD)
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 font-medium">Total Amount:</span>
-            <span className="font-extrabold text-sm text-emerald-700">
-              {settings.currency}{order.total.toFixed(2)}
-            </span>
-          </div>
-
-          {/* Firestore indicator */}
-          <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500 flex items-center gap-1 font-medium">
-              <Database className="w-3 h-3 text-emerald-600" />
-              Database Sync:
-            </span>
-            <span className={`font-medium px-2 py-0.5 rounded ${
-              order.savedToFirestore
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-slate-200 text-slate-700'
-            }`}>
-              {order.savedToFirestore ? 'Saved in Firestore' : 'Stored in Local Orders'}
+            <span className="text-slate-500 font-medium">Total Payable:</span>
+            <span className="font-black text-sm text-emerald-700">
+              {settings.currency}{Number(order.total || 0).toFixed(2)}
             </span>
           </div>
         </div>
 
-        {/* WhatsApp Actions */}
-        <div className="space-y-3">
+        {/* Primary Action Buttons */}
+        <div className="space-y-2.5">
           <button
             onClick={handleOpenWhatsApp}
-            className="w-full flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-5 rounded-2xl text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-98"
+            className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98"
           >
-            <MessageCircle className="w-5 h-5 fill-white text-emerald-600" />
-            <span>Open WhatsApp to Confirm Order</span>
-            <ExternalLink className="w-4 h-4 opacity-80" />
+            <MessageCircle className="w-4 h-4 fill-white text-emerald-600" />
+            <span>Open WhatsApp to Confirm Dispatch</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
           </button>
 
-          <div className="flex items-center gap-2">
+          {/* 1-Click PDF Tax Invoice Download */}
+          <button
+            onClick={handleDownloadInvoice}
+            className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded text-xs uppercase tracking-wider transition-all shadow-xs active:scale-98"
+          >
+            <Download className="w-4 h-4 text-emerald-400" />
+            <span>Download Tax Invoice (PDF)</span>
+          </button>
+
+          <div className="flex items-center gap-2 pt-1">
             <button
               onClick={handleCopy}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
             >
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-700">Copied to Clipboard!</span>
+                  <span className="text-emerald-700">Copied!</span>
                 </>
               ) : (
                 <>
@@ -121,17 +112,13 @@ export const OrderSuccessModal = ({ orderDetails, onClose }) => {
 
             <button
               onClick={onClose}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 transition-colors"
             >
               <span>Continue Shopping</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
-
-        <p className="text-[11px] text-slate-400">
-          A copy of your order has been saved. We look forward to fulfilling your request!
-        </p>
 
       </div>
     </div>
