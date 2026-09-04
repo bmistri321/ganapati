@@ -186,17 +186,18 @@ export function App() {
                 
                 {/* Department Header & Sort Bar (Clean & Transparent) */}
                 {(selectedCategory !== 'All Products' || searchQuery.trim()) && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-slate-200/80">
                     <div className="flex items-center gap-2">
-                      <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                      <div className="w-2 h-2 rounded-full bg-emerald-600" />
+                      <h1 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700">
                         {selectedCategory}
                       </h1>
-                      <span className="text-xs font-semibold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-200/70 px-1.5 py-0.5 rounded">
                         {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
                       </span>
                       <button
                         onClick={() => setSelectedCategory('All Products')}
-                        className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded transition-colors"
+                        className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded transition-colors"
                       >
                         Clear Filter &times;
                       </button>
