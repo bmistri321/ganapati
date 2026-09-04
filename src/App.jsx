@@ -165,12 +165,12 @@ export function App() {
             </div>
           </section>
 
-          {/* Catalog Main 2-Column Split Layout Area */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
+          {/* Catalog Main 2-Column Split Layout Area (Mobile & Desktop) */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">
             
-            <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 items-start">
+            <div className="flex flex-row gap-2 sm:gap-4 lg:gap-6 items-start">
               
-              {/* Left Column: Blinkit-Style Category Sidebar */}
+              {/* Left Column: Blinkit-Style Vertical Category Rail */}
               <CategorySidebar
                 categories={dynamicCategories}
                 products={products}
@@ -182,7 +182,7 @@ export function App() {
               />
 
               {/* Right Column: High-Density Product Catalog */}
-              <div className="flex-1 w-full space-y-4">
+              <div className="flex-1 min-w-0 space-y-4">
                 
                 {/* Department Header & Sort Bar (Clean & Transparent) */}
                 {(selectedCategory !== 'All Products' || searchQuery.trim()) && (
