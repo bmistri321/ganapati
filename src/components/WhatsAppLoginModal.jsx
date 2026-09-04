@@ -203,27 +203,9 @@ export const WhatsAppLoginModal = () => {
                 Enter WhatsApp OTP
               </h2>
               <p className="text-xs text-slate-500">
-                Code sent to <strong className="text-slate-800">+91 {phone}</strong>
+                A 6-digit verification code has been sent to <strong className="text-slate-800">+91 {phone}</strong>
               </p>
             </div>
-
-            {/* Test Demo OTP Banner */}
-            {demoCode && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-center text-xs text-emerald-900">
-                <span>Demo Code: </span>
-                <strong className="font-mono text-sm tracking-widest text-emerald-700">{demoCode}</strong>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const digits = demoCode.split('');
-                    setOtpDigits(digits);
-                  }}
-                  className="ml-2 text-[10px] font-bold text-emerald-700 underline cursor-pointer"
-                >
-                  Auto Fill
-                </button>
-              </div>
-            )}
 
             <form onSubmit={handleVerifyOtp} className="space-y-5">
               {/* 6 Inputs */}
