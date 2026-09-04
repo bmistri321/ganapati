@@ -138,7 +138,7 @@ export const CartDrawer = () => {
                         <img
                           src={item.image}
                           alt={item.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain p-1"
                         />
                       ) : (
                         <Package className="w-8 h-8 text-slate-400" />
