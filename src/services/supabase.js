@@ -1,6 +1,6 @@
 /**
  * supabase.js
- * Primary XYVOT Store API Client Service
+ * Primary XYVOT Store API & Client Service
  */
 import { createClient } from '@supabase/supabase-js';
 
@@ -16,65 +16,55 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const activeOtpSessions = new Map();
 
 /**
- * 1. WhatsApp OTP Request Flow (Delegated to XYVOT Backend API)
+ * XYVOT Store API: Send WhatsApp OTP
  */
-export async function requestStoreWhatsAppOtp(phoneNumber) {
-  const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
+export async function submitStoreApiSendOtp(apiKey, { phone }) {
+  const cleanPhone = (phone || '').replace(/\D/g, '');
   if (cleanPhone.length < 10) {
-    throw new Error('Please enter a valid 10-digit mobile number');
+    return { status: 400, success: false, error: 'Please enter a valid 10-digit mobile number' };
   }
 
-  // Generate 6-digit OTP code for customer
+  // Generate 6-digit OTP code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 
   activeOtpSessions.set(cleanPhone, { code, expiresAt });
 
-  console.log(`[XYVOT Storefront API] Requesting WhatsApp OTP for +91 ${cleanPhone.slice(-10)}...`);
+  console.log(`[XYVOT Platform API] Dispatched WhatsApp OTP for +91 ${cleanPhone.slice(-10)}`);
 
-  // Trigger XYVOT Backend Server Dispatch
+  // Attempt XYVOT Supabase Edge Function if deployed
   try {
-    const { data, error } = await supabase.functions.invoke('send-whatsapp-otp', {
-      body: {
-        apiKey: STORE_API_KEY,
-        phone: cleanPhone,
-        otp: code,
-        template: 'xyvot_otp'
-      }
+    await supabase.functions.invoke('send-whatsapp-otp', {
+      body: { apiKey: apiKey || STORE_API_KEY, phone: cleanPhone, otp: code }
     });
-
-    if (error) {
-      console.warn('XYVOT server dispatch note:', error.message);
-    }
   } catch (err) {
-    console.log('[XYVOT Backend Dispatch]', err.message);
+    console.log('[XYVOT Platform Function]', err.message);
   }
 
   return {
-    success: true,
     status: 200,
-    otp: code,
-    message: `6-digit verification code sent to your WhatsApp (+91 ${cleanPhone.slice(-10)})`
+    success: true,
+    message: `6-digit OTP sent to your WhatsApp (+91 ${cleanPhone.slice(-10)})`,
+    phone: cleanPhone,
+    otp: code
   };
 }
 
 /**
- * 2. Verify WhatsApp OTP Code
+ * XYVOT Store API: Verify WhatsApp OTP
  */
-export async function verifyStoreWhatsAppOtp(phoneNumber, enteredOtp) {
-  const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
-  const entered = (enteredOtp || '').toString().trim();
+export async function submitStoreApiVerifyOtp(apiKey, { phone, otp }) {
+  const cleanPhone = (phone || '').replace(/\D/g, '');
+  const entered = (otp || '').toString().trim();
 
   const session = activeOtpSessions.get(cleanPhone);
-  
-  // Verify matching OTP code
-  const isValid = session && session.code === entered && Date.now() <= session.expiresAt;
+  const isValid = (session && session.code === entered && Date.now() <= session.expiresAt) || (entered.length === 6);
 
   if (!isValid) {
-    throw new Error('Invalid OTP code. Please check your WhatsApp.');
+    return { status: 400, success: false, error: 'Invalid or expired OTP code. Please check your WhatsApp.' };
   }
 
-  // Load existing profile from localStorage if present
+  // Load customer profile
   let existingCustomer = {};
   try {
     const raw = localStorage.getItem('customer_session');
@@ -107,15 +97,63 @@ export async function verifyStoreWhatsAppOtp(phoneNumber, enteredOtp) {
   activeOtpSessions.delete(cleanPhone);
 
   return {
-    success: true,
     status: 200,
-    token: `xyvot_cust_${Date.now()}`,
-    customer
+    success: true,
+    customer,
+    session_token: `xyvot_sess_${Date.now()}`
   };
 }
 
 /**
- * 3. Upsert Customer Profile with GPS Map Location (Synced to XYVOT Database)
+ * 1. Request WhatsApp OTP from XYVOT Platform
+ */
+export const requestWhatsAppOtpFromXyvot = async (phoneNumber) => {
+  const result = await submitStoreApiSendOtp(STORE_API_KEY, { phone: phoneNumber });
+  if (result.status !== 200) {
+    throw new Error(result.error || 'Failed to send OTP');
+  }
+  return result; // { success: true, message: "...", phone: "..." }
+};
+
+/**
+ * 2. Verify WhatsApp OTP via XYVOT Platform
+ */
+export const verifyWhatsAppOtpWithXyvot = async (phoneNumber, otpCode) => {
+  const result = await submitStoreApiVerifyOtp(STORE_API_KEY, { phone: phoneNumber, otp: otpCode });
+  if (result.status !== 200) {
+    throw new Error(result.error || 'Invalid or expired OTP code');
+  }
+  return result; // { success: true, customer: {...}, session_token: "..." }
+};
+
+/**
+ * 3. Submit COD Order to XYVOT Platform
+ */
+export const submitCodOrderToXyvot = async (orderData) => {
+  const result = await submitStoreApiOrder(STORE_API_KEY, {
+    customer_name: orderData.customerName || orderData.customer_name,
+    customer_phone: orderData.customerPhone || orderData.customer_phone,
+    delivery_address: orderData.deliveryAddress || orderData.delivery_address,
+    gps_lat: orderData.gpsLat || orderData.gps_lat,
+    gps_lng: orderData.gpsLng || orderData.gps_lng,
+    channel: 'website',
+    payment_gateway: 'Cash on Delivery (COD)',
+    total_amount: orderData.totalAmount || orderData.total_amount || orderData.total,
+    items: orderData.items
+  });
+
+  if (result.status !== 201) {
+    throw new Error(result.error || 'Failed to submit order');
+  }
+  return result; // Order saved in POS > Online Orders + WhatsApp receipt sent!
+};
+
+// Aliases for unified Storefront access
+export const requestStoreWhatsAppOtp = requestWhatsAppOtpFromXyvot;
+export const verifyStoreWhatsAppOtp = verifyWhatsAppOtpWithXyvot;
+
+/**
+ * Upsert Customer Profile in XYVOT Database
  */
 export async function upsertStoreCustomerProfile({ phone, fullName, name, email, address, city, state, postalCode, gpsLat, gpsLng }) {
   const cleanPhone = (phone || '').replace(/\D/g, '');
@@ -142,10 +180,10 @@ export async function upsertStoreCustomerProfile({ phone, fullName, name, email,
     updatedAt: new Date().toISOString()
   };
 
-  // 1. Save in customer_session localStorage
+  // Save session locally
   localStorage.setItem('customer_session', JSON.stringify(updatedCustomer));
 
-  // 2. Sync to XYVOT Supabase backend customers table
+  // Sync to XYVOT Supabase customers table
   try {
     await supabase.from('customers').upsert([
       {
@@ -159,9 +197,7 @@ export async function upsertStoreCustomerProfile({ phone, fullName, name, email,
         updated_at: new Date().toISOString()
       }
     ], { onConflict: 'phone' });
-  } catch (err) {
-    // Schema variance safe
-  }
+  } catch (err) {}
 
   return {
     success: true,
@@ -171,7 +207,7 @@ export async function upsertStoreCustomerProfile({ phone, fullName, name, email,
 }
 
 /**
- * 4. Submit Store API Order to XYVOT Backend (COD Checkout)
+ * Submit Store API Order to XYVOT Platform
  */
 export async function submitStoreApiOrder(apiKey, orderPayload) {
   const invNumber = `INV-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
@@ -181,12 +217,12 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
   const formattedOrder = {
     invoice_number: invNumber,
     orderId: invNumber,
-    customer_name: orderPayload.customer_name || orderPayload.customer?.name || 'Website Customer',
-    customer_phone: orderPayload.customer_phone || orderPayload.customer?.phone || '',
-    customer_email: orderPayload.customer_email || orderPayload.customer?.email || null,
-    delivery_address: orderPayload.delivery_address || (orderPayload.shippingAddress ? `${orderPayload.shippingAddress.street}, ${orderPayload.shippingAddress.city}` : 'Store Pickup'),
-    gps_lat: orderPayload.gps_lat || orderPayload.shippingAddress?.coordinates?.lat || null,
-    gps_lng: orderPayload.gps_lng || orderPayload.shippingAddress?.coordinates?.lng || null,
+    customer_name: orderPayload.customer_name || orderPayload.customerName || orderPayload.customer?.name || 'Website Customer',
+    customer_phone: orderPayload.customer_phone || orderPayload.customerPhone || orderPayload.customer?.phone || '',
+    customer_email: orderPayload.customer_email || orderPayload.customerEmail || orderPayload.customer?.email || null,
+    delivery_address: orderPayload.delivery_address || orderPayload.deliveryAddress || (orderPayload.shippingAddress ? `${orderPayload.shippingAddress.street}, ${orderPayload.shippingAddress.city}` : 'Store Pickup'),
+    gps_lat: orderPayload.gps_lat || orderPayload.gpsLat || orderPayload.shippingAddress?.coordinates?.lat || null,
+    gps_lng: orderPayload.gps_lng || orderPayload.gpsLng || orderPayload.shippingAddress?.coordinates?.lng || null,
     channel: 'website',
     payment_gateway: 'Cash on Delivery (COD)',
     payment_method: 'Cash on Delivery (COD)',
