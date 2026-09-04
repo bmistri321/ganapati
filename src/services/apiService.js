@@ -1,52 +1,48 @@
 /**
  * apiService.js
  * Unified API Service for WhatsApp OTP Auth, Live Products, COD Checkout & Invoices
+ * XYVOT handles all WhatsApp dispatching securely - ZERO Meta tokens in frontend.
  */
-import { supabase, submitBackendOrder, DEFAULT_STORE_API_KEY } from './supabaseStore';
+import { 
+  submitStoreApiSendOtp, 
+  submitStoreApiVerifyOtp, 
+  submitStoreApiOrder, 
+  STORE_API_KEY, 
+  supabase 
+} from './supabase.js';
 import { saveOrder, getSavedOrders } from './orderService';
 
-export const STORE_API_KEY = import.meta.env.VITE_STORE_API_KEY || DEFAULT_STORE_API_KEY;
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://qirpufadoruqvgubpqzx.supabase.co';
+export { STORE_API_KEY };
 
-/**
- * 1. Send WhatsApp OTP
- */
-export async function sendWhatsAppOtpApi(phone) {
-  // Simulates or connects to backend WhatsApp OTP sender
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  return {
-    success: true,
-    message: `6-digit OTP sent to WhatsApp (+91 ${phone.slice(-10)})`,
-    otp: code
-  };
-}
-
-/**
- * 2. Verify WhatsApp OTP
- */
-export async function verifyWhatsAppOtpApi(phone, otp) {
-  if (otp.length === 6) {
-    return {
-      success: true,
-      token: `cust_token_${Date.now()}`,
-      customer: {
-        phone,
-        verified: true
-      }
-    };
+// 1. Ask XYVOT to send the OTP
+export const sendWhatsAppOtp = async (phone) => {
+  const res = await submitStoreApiSendOtp(STORE_API_KEY, { phone });
+  if (res.status !== 200) {
+    throw new Error(res.error || 'Failed to send OTP');
   }
-  return { success: false, error: 'Invalid OTP' };
-}
+  return res; // { success: true, message: "OTP sent" }
+};
+
+// 2. Ask XYVOT to verify the OTP
+export const verifyWhatsAppOtp = async (phone, otp) => {
+  const res = await submitStoreApiVerifyOtp(STORE_API_KEY, { phone, otp });
+  if (res.status !== 200) {
+    throw new Error(res.error || 'Invalid or expired OTP');
+  }
+  return res; // { success: true, customer: {...}, session_token: "..." }
+};
+
+// Aliases for compatibility
+export const sendWhatsAppOtpApi = sendWhatsAppOtp;
+export const verifyWhatsAppOtpApi = verifyWhatsAppOtp;
 
 /**
  * 3. 1-Click Cash on Delivery (COD) Checkout Endpoint
  */
 export async function submitCODCheckout(orderPayload) {
   try {
-    // 1. Save to Supabase sales_orders table
-    const backendResult = await submitBackendOrder(orderPayload);
+    const backendResult = await submitStoreApiOrder(STORE_API_KEY, orderPayload);
     
-    // 2. Save to local fallback / cache
     const savedOrder = await saveOrder({
       ...orderPayload,
       invoice_number: backendResult?.invoice_number || `INV-${Date.now()}`,
@@ -63,7 +59,6 @@ export async function submitCODCheckout(orderPayload) {
     };
   } catch (error) {
     console.error('COD Checkout API Error:', error);
-    // Fallback to local order
     const localOrder = await saveOrder({
       ...orderPayload,
       status: 'Pending COD Confirmation',
@@ -81,7 +76,6 @@ export async function fetchCustomerOrders(phone) {
   const cleanedPhone = phone ? phone.replace(/\D/g, '') : '';
 
   try {
-    // Also query Supabase sales_orders
     const { data, error } = await supabase
       .from('sales_orders')
       .select('*')
@@ -108,7 +102,6 @@ export async function fetchCustomerOrders(phone) {
         items: []
       }));
 
-      // Merge backend orders with local orders avoiding duplicates
       const allOrders = [...localOrders];
       for (const bo of formattedBackendOrders) {
         if (!allOrders.some((o) => o.orderId === bo.orderId || o.invoice_number === bo.invoice_number)) {

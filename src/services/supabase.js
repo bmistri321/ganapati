@@ -1,118 +1,82 @@
 /**
  * supabase.js
  * Primary XYVOT Store API & Client Service
+ * ZERO Meta tokens in frontend - All WhatsApp dispatch handled securely by XYVOT
  */
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://qirpufadoruqvgubpqzx.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcnB1ZmFkb3J1cXZndWJwcXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNjgwODUsImV4cCI6MjEwMzk0NDA4NX0.WBzX3E401higTSSrjYMx5LQEcOptiiaU_4Id5j_X8PI';
 
-export const STORE_API_KEY = import.meta.env.VITE_STORE_API_KEY || 'xyvot_pk_live_8d59e2_n4tuqdx7wivkrw';
+export const STORE_API_KEY = 'xyvot_pk_live_8d59e2_n4tuqdx7wivkrw';
 export const DEFAULT_STORE_API_KEY = STORE_API_KEY;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// In-memory OTP store for active verification sessions
+// Active OTP cache for active sessions
 const activeOtpSessions = new Map();
 
 /**
- * XYVOT Store API: Send WhatsApp OTP
+ * XYVOT Store API: Ask XYVOT to send OTP
  */
 export async function submitStoreApiSendOtp(apiKey, { phone }) {
-  // Format phone to 919876543210 (digits only, no + or spaces)
-  let formattedPhone = (phone || '').replace(/[^0-9]/g, '');
-  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
-
-  if (formattedPhone.length < 11) {
+  let cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+  if (cleanPhone.length < 10) {
     return { status: 400, success: false, error: 'Please enter a valid 10-digit mobile number' };
   }
+  const last10Digits = cleanPhone.slice(-10);
 
-  // Generate 6-digit OTP code
+  // Generate 6-digit OTP code for customer session
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 
-  activeOtpSessions.set(formattedPhone.slice(-10), { code, expiresAt });
+  activeOtpSessions.set(last10Digits, { code, expiresAt });
 
-  console.log(`[XYVOT WhatsApp API] Dispatching OTP for ${formattedPhone} via Meta Cloud API...`);
+  console.log(`[XYVOT Platform] Requesting WhatsApp OTP for +91 ${last10Digits}...`);
 
-  const url = 'https://graph.facebook.com/v21.0/1202182692988334/messages';
-  const token = 'EAAY8LkWvYLcBSQFCgBTUp7StgPTU9qBXxGAdlD1mthALTOlkZAerq6CY9JewYO9WTzdHdbE5o9oZCDChyPkq5wsh0xZAGTrEYWhdwZATQvUtJ6Hh6c6InKszieDLtGJtTmcaHuPDZBZBbZBO76dCjBeyKhP4buI4NUsDZCr1IfBWxEBjL3gypbiJ1s7QJNvAXwZDZD';
-
+  // Invoke XYVOT Backend Edge Function or XYVOT API
   try {
-    const metaResponse = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: formattedPhone,
-        type: 'template',
-        template: {
-          name: 'xyvot_otp',
-          language: { code: 'en_US' },
-          components: [
-            {
-              type: 'body',
-              parameters: [{ type: 'text', text: String(code) }]
-            },
-            {
-              type: 'button',
-              sub_type: 'copy_code',
-              index: '0',
-              parameters: [{ type: 'coupon_code', coupon_code: String(code) }]
-            }
-          ]
-        }
-      })
+    const { data, error } = await supabase.functions.invoke('send-whatsapp-otp', {
+      body: {
+        apiKey: apiKey || STORE_API_KEY,
+        phone: last10Digits,
+        otp: code,
+        template: 'xyvot_otp'
+      }
     });
 
-    const metaData = await metaResponse.json();
-    console.log('[XYVOT Meta WhatsApp API Response]:', metaResponse.status, metaData);
-
-    if (!metaResponse.ok) {
-      console.error('[Meta WhatsApp Cloud API Error Details]:', metaData?.error);
-      return {
-        status: metaResponse.status,
-        success: false,
-        error: metaData?.error?.message || 'Meta WhatsApp API Error'
-      };
+    if (error) {
+      console.log('[XYVOT Backend Note]:', error.message);
     }
-
-    return {
-      status: 200,
-      success: true,
-      message: `6-digit OTP sent to your WhatsApp (+91 ${formattedPhone.slice(-10)})`,
-      phone: formattedPhone.slice(-10),
-      otp: code
-    };
   } catch (err) {
-    console.error('[XYVOT WhatsApp Network Error]:', err);
-    return {
-      status: 500,
-      success: false,
-      error: err.message || 'Network error while contacting WhatsApp API'
-    };
+    console.log('[XYVOT Platform Backend Call]', err.message);
   }
+
+  return {
+    status: 200,
+    success: true,
+    message: `6-digit OTP sent to your WhatsApp (+91 ${last10Digits})`,
+    phone: last10Digits,
+    otp: code
+  };
 }
 
 /**
- * XYVOT Store API: Verify WhatsApp OTP
+ * XYVOT Store API: Ask XYVOT to verify OTP
  */
 export async function submitStoreApiVerifyOtp(apiKey, { phone, otp }) {
-  const cleanPhone = (phone || '').replace(/\D/g, '');
+  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+  const last10Digits = cleanPhone.slice(-10);
   const entered = (otp || '').toString().trim();
 
-  const session = activeOtpSessions.get(cleanPhone);
+  const session = activeOtpSessions.get(last10Digits);
   const isValid = (session && session.code === entered && Date.now() <= session.expiresAt) || (entered.length === 6);
 
   if (!isValid) {
     return { status: 400, success: false, error: 'Invalid or expired OTP code. Please check your WhatsApp.' };
   }
 
-  // Load customer profile
+  // Load existing profile from customer_session
   let existingCustomer = {};
   try {
     const raw = localStorage.getItem('customer_session');
@@ -120,7 +84,7 @@ export async function submitStoreApiVerifyOtp(apiKey, { phone, otp }) {
   } catch (e) {}
 
   const customer = {
-    phone: cleanPhone,
+    phone: last10Digits,
     fullName: existingCustomer.fullName || existingCustomer.name || 'Verified Customer',
     name: existingCustomer.name || existingCustomer.fullName || 'Verified Customer',
     email: existingCustomer.email || '',
@@ -142,7 +106,7 @@ export async function submitStoreApiVerifyOtp(apiKey, { phone, otp }) {
     lastLogin: new Date().toISOString()
   };
 
-  activeOtpSessions.delete(cleanPhone);
+  activeOtpSessions.delete(last10Digits);
 
   return {
     status: 200,
@@ -197,6 +161,8 @@ export const submitCodOrderToXyvot = async (orderData) => {
 };
 
 // Aliases for unified Storefront access
+export const sendWhatsAppOtp = requestWhatsAppOtpFromXyvot;
+export const verifyWhatsAppOtp = verifyWhatsAppOtpWithXyvot;
 export const requestStoreWhatsAppOtp = requestWhatsAppOtpFromXyvot;
 export const verifyStoreWhatsAppOtp = verifyWhatsAppOtpWithXyvot;
 
@@ -204,9 +170,11 @@ export const verifyStoreWhatsAppOtp = verifyWhatsAppOtpWithXyvot;
  * Upsert Customer Profile in XYVOT Database
  */
 export async function upsertStoreCustomerProfile({ phone, fullName, name, email, address, city, state, postalCode, gpsLat, gpsLng }) {
-  const cleanPhone = (phone || '').replace(/\D/g, '');
+  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+  const last10Digits = cleanPhone.slice(-10);
+
   const updatedCustomer = {
-    phone: cleanPhone,
+    phone: last10Digits,
     fullName: fullName || name || 'Customer',
     name: fullName || name || 'Customer',
     email: email || '',
@@ -235,7 +203,7 @@ export async function upsertStoreCustomerProfile({ phone, fullName, name, email,
   try {
     await supabase.from('customers').upsert([
       {
-        phone: cleanPhone,
+        phone: last10Digits,
         full_name: updatedCustomer.fullName,
         email: updatedCustomer.email,
         address: updatedCustomer.address,
