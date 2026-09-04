@@ -16,7 +16,70 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const activeOtpSessions = new Map();
 
 /**
- * 1. WhatsApp OTP Request Flow
+ * WhatsApp Meta Cloud API - Approved Template Dispatcher
+ */
+export const sendWhatsAppOtp = async (phone, otp) => {
+  // Format phone to 919876543210 (digits only)
+  let formattedPhone = phone.replace(/[^0-9]/g, '');
+  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
+
+  const url = 'https://graph.facebook.com/v21.0/1258313577369410/messages';
+  const token = 'EAAY8LkWvYLcBSQFCgBTUp7StgPTU9qBXxGAdlD1mthALTOlkZAerq6CY9JewYO9WTzdHdbE5o9oZCDChyPkq5wsh0xZAGTrEYWhdwZATQvUtJ6Hh6c6InKszieDLtGJtTmcaHuPDZBZBbZBO76dCjBeyKhP4buI4NUsDZCr1IfBWxEBjL3gypbiJ1s7QJNvAXwZDZD';
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: formattedPhone,
+    type: 'template',
+    template: {
+      name: 'xyvot_otp',
+      language: {
+        code: 'en_US'
+      },
+      components: [
+        {
+          type: 'body',
+          parameters: [
+            {
+              type: 'text',
+              text: String(otp)
+            }
+          ]
+        },
+        {
+          type: 'button',
+          sub_type: 'copy_code',
+          index: '0',
+          parameters: [
+            {
+              type: 'coupon_code',
+              coupon_code: String(otp)
+            }
+          ]
+        }
+      ]
+    }
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    console.error('Meta WhatsApp API Error:', data);
+    throw new Error(data?.error?.message || 'Failed to dispatch WhatsApp OTP');
+  }
+  return data;
+};
+
+/**
+ * 1. WhatsApp OTP Request Flow (Dispatches via Meta Cloud API)
  */
 export async function requestStoreWhatsAppOtp(phoneNumber) {
   const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
@@ -30,7 +93,10 @@ export async function requestStoreWhatsAppOtp(phoneNumber) {
 
   activeOtpSessions.set(cleanPhone, { code, expiresAt });
 
-  console.log(`[XYVOT WhatsApp Auth] Generated OTP for +91 ${cleanPhone.slice(-10)}: ${code}`);
+  console.log(`[XYVOT WhatsApp Auth] Sending real OTP to +91 ${cleanPhone.slice(-10)} via Meta Cloud API...`);
+
+  // Dispatch live WhatsApp OTP via Meta Cloud API
+  await sendWhatsAppOtp(cleanPhone, code);
 
   return {
     success: true,
@@ -49,8 +115,8 @@ export async function verifyStoreWhatsAppOtp(phoneNumber, enteredOtp) {
 
   const session = activeOtpSessions.get(cleanPhone);
   
-  // Verify matching OTP code or demo fallback
-  const isValid = (session && session.code === entered && Date.now() <= session.expiresAt) || (entered.length === 6);
+  // Verify matching OTP code
+  const isValid = session && session.code === entered && Date.now() <= session.expiresAt;
 
   if (!isValid) {
     throw new Error('Invalid OTP code. Please check your WhatsApp.');
