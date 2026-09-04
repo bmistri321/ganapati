@@ -172,7 +172,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
     channel: orderPayload.channel || 'website',
     payment_gateway: orderPayload.payment_gateway || orderPayload.paymentMethod || 'Cash on Delivery (COD)',
     payment_method: 'Cash on Delivery (COD)',
-    status: 'Pending COD Confirmation',
+    status: 'pending_cod',
     subtotal: subtotalAmount,
     discount_pct: 0,
     discount_amount: 0,
@@ -213,7 +213,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
         total_amount: formattedOrder.total_amount,
         payment_method: formattedOrder.payment_method,
         channel: formattedOrder.channel,
-        status: 'Pending COD Confirmation',
+        status: 'pending_cod',
         items: formattedOrder.items
       }])
       .select();

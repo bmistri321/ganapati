@@ -177,43 +177,15 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
         const placedOrder = result.order;
 
-        // Generate WhatsApp message & URL
-        const whatsappMsg = formatWhatsAppMessage({
-          ...placedOrder,
-          orderId: placedOrder.invoice_number || placedOrder.orderId,
-          customer: {
-            name: customerInfo.name,
-            phone: customerInfo.phone,
-            email: customerInfo.email
-          },
-          deliveryMethod,
-          shippingAddress,
-          items: cartItems,
-          subtotal,
-          deliveryFee,
-          total: grandTotal
-        }, settings);
-
-        const whatsappUrl = buildWhatsAppUrl(settings.whatsappNumber, whatsappMsg);
-
         clearCart();
         setIsCheckoutOpen(false);
 
-        // Show Success Modal
+        // Show Success Modal with order details
         if (onOrderSuccess) {
           onOrderSuccess({
             order: placedOrder,
-            placedOrder: placedOrder,
-            whatsappUrl,
-            whatsappMsg,
+            placedOrder: placedOrder
           });
-        }
-
-        // Auto-open WhatsApp
-        try {
-          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-        } catch (e) {
-          console.log('Popup handled via success screen', e);
         }
       }
     } catch (err) {
