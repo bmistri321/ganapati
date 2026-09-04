@@ -59,10 +59,9 @@ export const WhatsAppLoginModal = () => {
     setLoading(true);
     try {
       const res = await requestStoreWhatsAppOtp(cleanPhone);
-      setDemoCode(res.otp);
       setOtpStep(true); // show the 6-digit input box
       setCountdown(300);
-      showToast(`6-digit OTP sent to your WhatsApp! (Code: ${res.otp})`, 'success');
+      showToast('6-digit OTP sent to your WhatsApp!', 'success');
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 100);

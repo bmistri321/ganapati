@@ -19,8 +19,11 @@ const activeOtpSessions = new Map();
  * XYVOT Store API: Send WhatsApp OTP
  */
 export async function submitStoreApiSendOtp(apiKey, { phone }) {
-  const cleanPhone = (phone || '').replace(/\D/g, '');
-  if (cleanPhone.length < 10) {
+  // Format phone to 919876543210 (digits only, no + or spaces)
+  let formattedPhone = (phone || '').replace(/[^0-9]/g, '');
+  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
+
+  if (formattedPhone.length < 11) {
     return { status: 400, success: false, error: 'Please enter a valid 10-digit mobile number' };
   }
 
@@ -28,26 +31,71 @@ export async function submitStoreApiSendOtp(apiKey, { phone }) {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 
-  activeOtpSessions.set(cleanPhone, { code, expiresAt });
+  activeOtpSessions.set(formattedPhone.slice(-10), { code, expiresAt });
 
-  console.log(`[XYVOT Platform API] Dispatched WhatsApp OTP for +91 ${cleanPhone.slice(-10)}`);
+  console.log(`[XYVOT WhatsApp API] Dispatching OTP for ${formattedPhone} via Meta Cloud API...`);
 
-  // Attempt XYVOT Supabase Edge Function if deployed
+  const url = 'https://graph.facebook.com/v21.0/1202182692988334/messages';
+  const token = 'EAAY8LkWvYLcBSQFCgBTUp7StgPTU9qBXxGAdlD1mthALTOlkZAerq6CY9JewYO9WTzdHdbE5o9oZCDChyPkq5wsh0xZAGTrEYWhdwZATQvUtJ6Hh6c6InKszieDLtGJtTmcaHuPDZBZBbZBO76dCjBeyKhP4buI4NUsDZCr1IfBWxEBjL3gypbiJ1s7QJNvAXwZDZD';
+
   try {
-    await supabase.functions.invoke('send-whatsapp-otp', {
-      body: { apiKey: apiKey || STORE_API_KEY, phone: cleanPhone, otp: code }
+    const metaResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: 'xyvot_otp',
+          language: { code: 'en_US' },
+          components: [
+            {
+              type: 'body',
+              parameters: [{ type: 'text', text: String(code) }]
+            },
+            {
+              type: 'button',
+              sub_type: 'copy_code',
+              index: '0',
+              parameters: [{ type: 'coupon_code', coupon_code: String(code) }]
+            }
+          ]
+        }
+      })
     });
-  } catch (err) {
-    console.log('[XYVOT Platform Function]', err.message);
-  }
 
-  return {
-    status: 200,
-    success: true,
-    message: `6-digit OTP sent to your WhatsApp (+91 ${cleanPhone.slice(-10)})`,
-    phone: cleanPhone,
-    otp: code
-  };
+    const metaData = await metaResponse.json();
+    console.log('[XYVOT Meta WhatsApp API Response]:', metaResponse.status, metaData);
+
+    if (!metaResponse.ok) {
+      console.error('[Meta WhatsApp Cloud API Error Details]:', metaData?.error);
+      return {
+        status: metaResponse.status,
+        success: false,
+        error: metaData?.error?.message || 'Meta WhatsApp API Error'
+      };
+    }
+
+    return {
+      status: 200,
+      success: true,
+      message: `6-digit OTP sent to your WhatsApp (+91 ${formattedPhone.slice(-10)})`,
+      phone: formattedPhone.slice(-10),
+      otp: code
+    };
+  } catch (err) {
+    console.error('[XYVOT WhatsApp Network Error]:', err);
+    return {
+      status: 500,
+      success: false,
+      error: err.message || 'Network error while contacting WhatsApp API'
+    };
+  }
 }
 
 /**
