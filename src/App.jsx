@@ -166,10 +166,10 @@ export function App() {
           </section>
 
           {/* Catalog Main Grid Area */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
             
-            {/* Blinkit-Style Visual Category Grid */}
-            <div className="bg-white p-5 sm:p-6 rounded border border-slate-200/80 shadow-sm">
+            {/* Clean, Borderless Blinkit-Style Category Row (Image + Title) */}
+            <div className="pb-2 border-b border-slate-200/60">
               <CategoryVisualGrid
                 categories={dynamicCategories}
                 products={products}
