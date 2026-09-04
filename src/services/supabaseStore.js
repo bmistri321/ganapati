@@ -27,9 +27,11 @@ export async function fetchLiveProductsFromBackend() {
         const originalPrice = p.original_price ? parseFloat(p.original_price) : (p.mrp ? parseFloat(p.mrp) : null);
         const stock = parseInt(p.stock_quantity ?? p.stock ?? 0, 10);
         
-        // Image fallbacks
-        const primaryImage = p.image_url || p.image || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80';
-        const imageList = Array.isArray(p.images) && p.images.length > 0 ? p.images : [primaryImage];
+        // Pure database image without any fake fallback URLs
+        const primaryImage = p.image_url || p.image || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null);
+        const imageList = Array.isArray(p.images) && p.images.length > 0 
+          ? p.images 
+          : (primaryImage ? [primaryImage] : []);
 
         return {
           id: p.id,
@@ -43,10 +45,10 @@ export async function fetchLiveProductsFromBackend() {
           badge: stock <= 3 && stock > 0 ? 'Low Stock' : (p.badge || (p.featured ? 'Featured' : null)),
           image: primaryImage,
           images: imageList,
-          description: p.description || `${p.name || 'Authentic Product'} - Premium quality product ready for direct dispatch.`,
+          description: p.description || `${p.name || 'Product'} - Real-time verified item from inventory.`,
           features: Array.isArray(p.features) && p.features.length > 0 
             ? p.features 
-            : ['100% Genuine & Authentic', 'Quick Dispatch with Live Tracking', 'Direct WhatsApp Support']
+            : ['Verified Inventory Item', 'Direct WhatsApp Dispatch']
         };
       });
     }

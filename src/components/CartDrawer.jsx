@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Trash2, ShoppingBag, ArrowRight, Plus, Minus, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Trash2, ShoppingBag, ArrowRight, Plus, Minus, AlertCircle, Sparkles, Package } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 
@@ -133,12 +133,16 @@ export const CartDrawer = () => {
                     className="flex gap-3.5 p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-all"
                   >
                     {/* Thumbnail */}
-                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-white flex-shrink-0 border border-slate-200/60">
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200/60">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="w-8 h-8 text-slate-400" />
+                      )}
                     </div>
 
                     {/* Info */}

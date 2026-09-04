@@ -13,7 +13,8 @@ import {
   Plus, 
   Minus,
   Sparkles,
-  Layers
+  Layers,
+  Package
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
@@ -29,7 +30,7 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (product) {
-      setSelectedImage(product.image);
+      setSelectedImage(product.image || '');
       setQuantity(1);
     }
   }, [product]);
@@ -42,7 +43,7 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
   const isLowStock = product.stock > 0 && product.stock <= 4;
   const isMaxInCart = qtyInCart >= product.stock;
 
-  const images = product.images && product.images.length > 0 ? product.images : [product.image];
+  const validImages = (product.images || []).filter(Boolean);
 
   // Find similar products from the same category (excluding current product)
   const similarProducts = allProducts
@@ -98,14 +99,24 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
         <div className="bg-white rounded border border-slate-200/80 shadow-sm overflow-hidden p-6 sm:p-8 lg:p-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             
-            {/* Gallery Column (5 cols) */}
+            {/* Gallery Column (6 cols) */}
             <div className="lg:col-span-6 space-y-4">
-              <div className="relative aspect-square w-full rounded overflow-hidden bg-slate-100 border border-slate-200 shadow-inner">
-                <img
-                  src={selectedImage}
-                  alt={product.title}
-                  className="w-full h-full object-cover object-center transition-all duration-300"
-                />
+              <div className="relative aspect-square w-full rounded overflow-hidden bg-slate-100 border border-slate-200 shadow-inner flex items-center justify-center">
+                {selectedImage ? (
+                  <img
+                    src={selectedImage}
+                    alt={product.title}
+                    className="w-full h-full object-cover object-center transition-all duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center text-slate-400 p-8">
+                    <Package className="w-20 h-20 text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-500 mt-3 text-center uppercase tracking-wider">
+                      {product.category || 'Inventory Item'}
+                    </span>
+                  </div>
+                )}
+
                 {product.badge && (
                   <span className="absolute top-4 left-4 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-slate-900/90 text-white backdrop-blur-md">
                     {product.badge}
@@ -119,9 +130,9 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
               </div>
 
               {/* Thumbnails list */}
-              {images.length > 1 && (
+              {validImages.length > 1 && (
                 <div className="flex gap-3 overflow-x-auto pb-2">
-                  {images.map((img, idx) => (
+                  {validImages.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImage(img)}

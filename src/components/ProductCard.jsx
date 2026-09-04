@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Eye, Star, Check, AlertTriangle, XCircle } from 'lucide-react';
+import { Plus, Minus, Eye, Star, Check, AlertTriangle, XCircle, Package } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 
@@ -21,12 +21,21 @@ export const ProductCard = ({ product, onSelectProduct }) => {
         className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
         onClick={() => onSelectProduct(product)}
       >
-        <img
-          src={product.image}
-          alt={product.title}
-          loading="lazy"
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-        />
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.title}
+            loading="lazy"
+            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center text-slate-400 p-4">
+            <Package className="w-12 h-12 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            <span className="text-[11px] font-semibold text-slate-500 mt-2 text-center uppercase tracking-wider">
+              {product.category || 'Inventory Item'}
+            </span>
+          </div>
+        )}
 
         {/* Floating Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
