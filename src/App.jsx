@@ -20,9 +20,12 @@ import {
   Package, 
   Search,
   RefreshCw,
-  ShoppingBag
+  ShoppingBag,
+  Grid
 } from 'lucide-react';
 import { smartSearchProducts } from './utils/searchHelper';
+import { CategoryVisualGrid } from './components/CategoryVisualGrid';
+import { CategoryShelf } from './components/CategoryShelf';
 
 export function App() {
   const { settings } = useSettings();
@@ -163,71 +166,65 @@ export function App() {
           </section>
 
           {/* Catalog Main Grid Area */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
             
-            {/* Controls: Categories & Sorting */}
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                
-                {/* Dynamic Category Filter Pills based on real products */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-                  {dynamicCategories.map((cat) => {
-                    const count = cat === 'All Products'
-                      ? products.length
-                      : products.filter((p) => p.category && p.category.toLowerCase() === cat.toLowerCase()).length;
+            {/* Blinkit-Style Visual Category Grid */}
+            <div className="bg-white p-5 sm:p-6 rounded border border-slate-200/80 shadow-sm">
+              <CategoryVisualGrid
+                categories={dynamicCategories}
+                products={products}
+                selectedCategory={selectedCategory}
+                onSelectCategory={(cat) => {
+                  setSelectedCategory(cat);
+                  setSearchQuery('');
+                }}
+              />
+            </div>
 
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-3.5 py-2 rounded text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                          selectedCategory === cat
-                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                            : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
-                        }`}
-                      >
-                        <span>{cat}</span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
-                            selectedCategory === cat
-                              ? 'bg-white/20 text-white'
-                              : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Sorting & Stats */}
-                <div className="flex items-center justify-between md:justify-end gap-3 flex-shrink-0">
-                  <span className="text-xs font-medium text-slate-500 hidden sm:inline">
-                    Showing <strong className="text-slate-800">{filteredProducts.length}</strong> items ({inStockCount} in stock)
+            {/* Sorting & Filter Summary Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded border border-slate-200/80 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800">
+                  {selectedCategory === 'All Products' && !searchQuery.trim() ? 'All Department Shelves' : `Showing: ${selectedCategory}`}
+                </span>
+                {selectedCategory !== 'All Products' && (
+                  <button
+                    onClick={() => setSelectedCategory('All Products')}
+                    className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded transition-colors"
+                  >
+                    View All &times;
+                  </button>
+                )}
+                {searchQuery.trim() && (
+                  <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    Query: "{searchQuery}"
                   </span>
+                )}
+              </div>
 
-                  {/* Sort dropdown */}
-                  <div className="flex items-center gap-2 bg-white border border-slate-200/80 rounded px-3 py-1.5 shadow-sm">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="text-xs font-semibold text-slate-700 bg-transparent outline-none cursor-pointer"
-                    >
-                      <option value="featured">Featured First</option>
-                      <option value="price-low">Price: Low to High</option>
-                      <option value="price-high">Price: High to Low</option>
-                      <option value="rating">Highest Rated</option>
-                      <option value="stock">Most in Stock</option>
-                    </select>
-                  </div>
+              {/* Sorting */}
+              <div className="flex items-center gap-3 self-end sm:self-auto">
+                <span className="text-xs text-slate-500 font-medium hidden md:inline">
+                  {filteredProducts.length} items found
+                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 shadow-sm">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-xs font-semibold text-slate-700 bg-transparent outline-none cursor-pointer"
+                  >
+                    <option value="featured">Featured First</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="rating">Highest Rated</option>
+                    <option value="stock">Most in Stock</option>
+                  </select>
                 </div>
-
               </div>
             </div>
 
-            {/* Product Catalog Grid */}
+            {/* Product Catalog Display */}
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[...Array(8)].map((_, i) => (
@@ -240,7 +237,7 @@ export function App() {
                 ))}
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="bg-white rounded p-12 text-center border border-slate-200/80 space-y-4 max-w-lg mx-auto my-8">
+              <div className="bg-white rounded p-12 text-center border border-slate-200/80 space-y-4 max-w-lg mx-auto my-8 shadow-sm">
                 <div className="w-16 h-16 rounded bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Search className="w-8 h-8" />
                 </div>
@@ -260,7 +257,28 @@ export function App() {
                   Reset Filters
                 </button>
               </div>
+            ) : selectedCategory === 'All Products' && !searchQuery.trim() ? (
+              /* Blinkit-Style Multi-Category Shelves View */
+              <div className="space-y-12">
+                {dynamicCategories
+                  .filter((cat) => cat !== 'All Products')
+                  .map((catName) => {
+                    const catProducts = products.filter(
+                      (p) => p.category && p.category.toLowerCase() === catName.toLowerCase()
+                    );
+                    return (
+                      <CategoryShelf
+                        key={catName}
+                        categoryName={catName}
+                        products={catProducts}
+                        onSelectProduct={(p) => setSelectedProduct(p)}
+                        onViewCategory={(cat) => setSelectedCategory(cat)}
+                      />
+                    );
+                  })}
+              </div>
             ) : (
+              /* Filtered / Single Category Grid */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
                 {filteredProducts.map((product) => (
                   <ProductCard
