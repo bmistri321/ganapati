@@ -1,0 +1,238 @@
+import React, { useEffect } from 'react';
+import { X, Trash2, ShoppingBag, ArrowRight, Plus, Minus, AlertCircle, Sparkles } from 'lucide-react';
+import { useCart } from '../context/CartContext';
+import { useSettings } from '../context/SettingsContext';
+
+export const CartDrawer = () => {
+  const {
+    cartItems,
+    isCartOpen,
+    setIsCartOpen,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    subtotal,
+    totalItemsCount,
+    setIsCheckoutOpen,
+  } = useCart();
+
+  const { settings } = useSettings();
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isCartOpen) setIsCartOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCartOpen, setIsCartOpen]);
+
+  if (!isCartOpen) return null;
+
+  const freeShippingLeft = Math.max(0, settings.freeShippingThreshold - subtotal);
+  const freeShippingProgress = Math.min(
+    100,
+    (subtotal / settings.freeShippingThreshold) * 100
+  );
+
+  const handleProceedToCheckout = () => {
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in"
+        onClick={() => setIsCartOpen(false)}
+      />
+
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200">
+          
+          {/* Header */}
+          <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Your Cart</h2>
+                <p className="text-xs text-slate-500">
+                  {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'} selected
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {cartItems.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="text-xs text-rose-600 hover:text-rose-700 font-medium px-2 py-1 rounded hover:bg-rose-50 transition-colors"
+                >
+                  Clear All
+                </button>
+              )}
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Free Shipping Progress Bar */}
+          <div className="bg-slate-50 px-4 sm:px-6 py-3 border-b border-slate-100">
+            <div className="flex items-center justify-between text-xs mb-1.5 font-medium">
+              {freeShippingLeft > 0 ? (
+                <span className="text-slate-600">
+                  Add <span className="font-bold text-emerald-700">{settings.currency}{freeShippingLeft.toFixed(2)}</span> for <span className="text-emerald-700 font-bold">FREE Shipping</span>
+                </span>
+              ) : (
+                <span className="text-emerald-700 font-bold flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" /> You've unlocked FREE Shipping!
+                </span>
+              )}
+              <span className="text-slate-400 font-semibold">{Math.round(freeShippingProgress)}%</span>
+            </div>
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
+                style={{ width: `${freeShippingProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Cart Item List */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            {cartItems.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400">
+                  <ShoppingBag className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Your cart is empty</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                    Explore our modern catalog and add items with real-time stock availability.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsCartOpen(false)}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+                >
+                  Start Browsing
+                </button>
+              </div>
+            ) : (
+              cartItems.map((item) => {
+                const isMax = item.quantity >= item.stock;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex gap-3.5 p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-all"
+                  >
+                    {/* Thumbnail */}
+                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-white flex-shrink-0 border border-slate-200/60">
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {item.title}
+                          </h4>
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="text-slate-400 hover:text-rose-600 transition-colors p-0.5 flex-shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          {settings.currency}{item.price.toFixed(2)} each
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-200/50">
+                        {/* Stepper */}
+                        <div className="flex items-center border border-slate-200 rounded-lg bg-white">
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.stock)}
+                            className="p-1 text-slate-600 hover:text-slate-900"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="w-7 text-center text-xs font-bold text-slate-800">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)}
+                            disabled={isMax}
+                            className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-30"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Total price for this line */}
+                        <span className="text-sm font-extrabold text-slate-900">
+                          {settings.currency}{(item.price * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+
+                      {isMax && (
+                        <p className="text-[10px] text-amber-700 flex items-center gap-1 mt-1 font-medium">
+                          <AlertCircle className="w-3 h-3" /> Max available inventory reached
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer / Checkout Button */}
+          {cartItems.length > 0 && (
+            <div className="p-4 sm:p-6 border-t border-slate-100 bg-white space-y-3.5">
+              <div className="space-y-1.5 text-xs text-slate-600">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span className="font-semibold text-slate-900">{settings.currency}{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Estimated Fulfillment</span>
+                  <span className="text-slate-500 font-medium">Calculated at checkout</span>
+                </div>
+                <div className="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-100">
+                  <span>Subtotal Amount</span>
+                  <span className="text-emerald-700">{settings.currency}{subtotal.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleProceedToCheckout}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-5 rounded-2xl text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-98"
+              >
+                <span>Proceed to Guest Checkout</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <p className="text-[11px] text-center text-slate-400">
+                🔒 No account needed &bull; Order sent directly to WhatsApp
+              </p>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+};
