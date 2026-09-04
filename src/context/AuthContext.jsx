@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  requestStoreWhatsAppOtp, 
+  verifyStoreWhatsAppOtp, 
+  upsertStoreCustomerProfile 
+} from '../services/supabase';
 
 const AuthContext = createContext();
 
-const SESSION_KEY = 'quickcart_customer_session';
-const PROFILE_KEY = 'quickcart_customer_profile';
+const SESSION_KEY = 'customer_session';
 
 export const AuthProvider = ({ children }) => {
   const [customer, setCustomer] = useState(null);
@@ -22,12 +26,10 @@ export const AuthProvider = ({ children }) => {
   // Load session on startup
   useEffect(() => {
     try {
-      const savedSession = localStorage.getItem(SESSION_KEY);
-      const savedProfile = localStorage.getItem(PROFILE_KEY);
+      const savedSession = localStorage.getItem(SESSION_KEY) || localStorage.getItem('quickcart_customer_session');
       if (savedSession) {
         const sessionData = JSON.parse(savedSession);
-        const profileData = savedProfile ? JSON.parse(savedProfile) : {};
-        setCustomer({ ...sessionData, ...profileData });
+        setCustomer(sessionData);
       }
     } catch (e) {
       console.warn('Could not read customer session', e);
@@ -49,67 +51,71 @@ export const AuthProvider = ({ children }) => {
   }, [otpState.sent, otpState.countdown]);
 
   /**
-   * Send WhatsApp OTP
+   * Step A: Send OTP to customer's WhatsApp
    */
-  const sendWhatsAppOtp = async (phone) => {
-    const cleaned = phone.replace(/\D/g, '');
-    const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const sendWhatsAppOtp = async (phoneNumber) => {
+    const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
+    const res = await requestStoreWhatsAppOtp(cleanPhone);
     
-    // Simulating instant WhatsApp OTP dispatch
     setOtpState({
       sent: true,
-      phone: cleaned,
+      phone: cleanPhone,
       countdown: 300,
-      generatedOtp: generatedCode
+      generatedOtp: res.otp
     });
 
-    console.log(`[WhatsApp OTP] Code for +91${cleaned} is: ${generatedCode}`);
-    return { success: true, otp: generatedCode };
+    return res;
   };
 
   /**
-   * Verify WhatsApp OTP
+   * Step B: Customer enters 6-digit code & saves session in localStorage
    */
   const verifyWhatsAppOtp = async (enteredOtp) => {
-    // Accepts generated code or master demo code '123456'
-    if (enteredOtp === otpState.generatedOtp || enteredOtp === '123456' || enteredOtp === '999999') {
-      const newCustomer = {
-        phone: otpState.phone,
-        name: customer?.name || `Customer +91 ${otpState.phone.slice(-4)}`,
-        email: customer?.email || '',
-        verifiedAt: new Date().toISOString(),
-        shippingAddress: customer?.shippingAddress || {
-          street: '',
-          city: '',
-          state: '',
-          postalCode: '',
-          coordinates: { lat: 28.6139, lng: 77.2090 }
-        }
-      };
-
-      localStorage.setItem(SESSION_KEY, JSON.stringify(newCustomer));
-      setCustomer(newCustomer);
-      setOtpState({ sent: false, phone: '', countdown: 0, generatedOtp: null });
-      setIsAuthOpen(false);
-      return { success: true, customer: newCustomer };
+    try {
+      const res = await verifyStoreWhatsAppOtp(otpState.phone, enteredOtp);
+      if (res && res.customer) {
+        // Save session in localStorage
+        localStorage.setItem('customer_session', JSON.stringify(res.customer));
+        localStorage.setItem('quickcart_customer_session', JSON.stringify(res.customer));
+        setCustomer(res.customer);
+        setOtpState({ sent: false, phone: '', countdown: 0, generatedOtp: null });
+        setIsAuthOpen(false);
+        return { success: true, customer: res.customer };
+      }
+      return { success: false, error: 'Invalid OTP code' };
+    } catch (err) {
+      return { success: false, error: err.message || 'Invalid OTP code. Please check your WhatsApp.' };
     }
-    return { success: false, error: 'Invalid 6-digit OTP code. Please try again.' };
   };
 
   /**
-   * Update Customer Profile & Delivery Address
+   * Update Customer Profile & GPS Map Address
    */
-  const updateProfile = (profileData) => {
-    const updated = { ...customer, ...profileData };
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
-    setCustomer(updated);
+  const updateProfile = async (profileData) => {
+    const merged = {
+      phone: customer?.phone || profileData.phone,
+      fullName: profileData.fullName || profileData.name || customer?.fullName || customer?.name,
+      name: profileData.name || profileData.fullName || customer?.name,
+      email: profileData.email ?? customer?.email,
+      address: profileData.address || profileData.street || profileData.shippingAddress?.street || customer?.address,
+      city: profileData.city || profileData.shippingAddress?.city || customer?.city,
+      state: profileData.state || profileData.shippingAddress?.state || customer?.shippingAddress?.state,
+      postalCode: profileData.postalCode || profileData.shippingAddress?.postalCode || customer?.shippingAddress?.postalCode,
+      gpsLat: profileData.gpsLat || profileData.coordinates?.lat || profileData.shippingAddress?.coordinates?.lat || customer?.gpsLat,
+      gpsLng: profileData.gpsLng || profileData.coordinates?.lng || profileData.shippingAddress?.coordinates?.lng || customer?.gpsLng,
+    };
+
+    const res = await upsertStoreCustomerProfile(merged);
+    setCustomer(res.customer);
+    return res;
   };
 
   /**
    * Customer Logout
    */
   const logout = () => {
-    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('customer_session');
+    localStorage.removeItem('quickcart_customer_session');
     setCustomer(null);
   };
 
@@ -117,6 +123,8 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         customer,
+        currentCustomer: customer,
+        setCurrentCustomer: setCustomer,
         isAuthOpen,
         setIsAuthOpen,
         isOrdersOpen,

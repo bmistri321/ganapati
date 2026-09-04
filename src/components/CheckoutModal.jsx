@@ -7,13 +7,15 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { LocationPicker } from './LocationPicker';
 import { formatWhatsAppMessage, buildWhatsAppUrl } from '../services/orderService';
-import { submitCODCheckout } from '../services/apiService';
+import { submitStoreApiOrder, STORE_API_KEY, upsertStoreCustomerProfile } from '../services/supabase';
 
 export const CheckoutModal = ({ onOrderSuccess }) => {
   const { isCheckoutOpen, setIsCheckoutOpen, cartItems, subtotal, clearCart } = useCart();
   const { settings } = useSettings();
   const { showToast } = useToast();
-  const { customer, updateProfile } = useAuth();
+  const { currentCustomer, customer, updateProfile } = useAuth();
+
+  const activeCustomer = currentCustomer || customer;
 
   const [deliveryMethod, setDeliveryMethod] = useState('shipping'); // 'shipping' | 'pickup'
 
@@ -36,28 +38,30 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPreviewMessage, setShowPreviewMessage] = useState(false);
 
   // Sync with customer auth profile
   useEffect(() => {
-    if (customer) {
+    if (activeCustomer) {
       setCustomerInfo({
-        name: customer.name || '',
-        phone: customer.phone || '',
-        email: customer.email || ''
+        name: activeCustomer.fullName || activeCustomer.name || '',
+        phone: activeCustomer.phone || '',
+        email: activeCustomer.email || ''
       });
-      if (customer.shippingAddress) {
+      if (activeCustomer.shippingAddress || activeCustomer.address) {
         setShippingAddress({
-          street: customer.shippingAddress.street || '',
-          city: customer.shippingAddress.city || '',
-          state: customer.shippingAddress.state || '',
-          postalCode: customer.shippingAddress.postalCode || '',
-          notes: customer.shippingAddress.notes || '',
-          coordinates: customer.shippingAddress.coordinates || { lat: 28.6139, lng: 77.2090 }
+          street: activeCustomer.address || activeCustomer.shippingAddress?.street || '',
+          city: activeCustomer.city || activeCustomer.shippingAddress?.city || '',
+          state: activeCustomer.state || activeCustomer.shippingAddress?.state || '',
+          postalCode: activeCustomer.postalCode || activeCustomer.shippingAddress?.postalCode || '',
+          notes: activeCustomer.notes || activeCustomer.shippingAddress?.notes || '',
+          coordinates: {
+            lat: activeCustomer.gpsLat || activeCustomer.shippingAddress?.coordinates?.lat || 28.6139,
+            lng: activeCustomer.gpsLng || activeCustomer.shippingAddress?.coordinates?.lng || 77.2090
+          }
         });
       }
     }
-  }, [customer, isCheckoutOpen]);
+  }, [activeCustomer, isCheckoutOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -81,8 +85,8 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
     if (!customerInfo.name.trim()) errs.name = 'Full name is required';
     if (!customerInfo.phone.trim()) {
       errs.phone = 'WhatsApp phone number is required';
-    } else if (customerInfo.phone.trim().length < 7) {
-      errs.phone = 'Please enter a valid phone number';
+    } else if (customerInfo.phone.trim().length < 10) {
+      errs.phone = 'Please enter a valid 10-digit mobile number';
     }
 
     if (deliveryMethod === 'shipping') {
@@ -95,7 +99,10 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
     return Object.keys(errs).length === 0;
   };
 
-  const handlePlaceOrder = async () => {
+  /**
+   * 3. COD Checkout Submission
+   */
+  const handlePlaceCodOrder = async () => {
     if (!validate()) {
       showToast('Please fill in all required fields.', 'error');
       return;
@@ -109,71 +116,109 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
     setIsSubmitting(true);
 
     try {
+      const fullDeliveryAddress = deliveryMethod === 'shipping'
+        ? `${shippingAddress.street}, ${shippingAddress.city}, ${shippingAddress.state || ''} ${shippingAddress.postalCode || ''}`.trim()
+        : 'Store Pickup';
+
       const orderPayload = {
-        customer: customerInfo,
-        deliveryMethod,
-        shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : null,
+        customer_name: customerInfo.name || activeCustomer?.fullName || 'Website Customer',
+        customer_phone: customerInfo.phone || activeCustomer?.phone || '',
+        customer_email: customerInfo.email || activeCustomer?.email || '',
+        delivery_address: fullDeliveryAddress,
+        gps_lat: shippingAddress.coordinates?.lat || activeCustomer?.gpsLat || 28.6139,
+        gps_lng: shippingAddress.coordinates?.lng || activeCustomer?.gpsLng || 77.2090,
+        channel: 'website',
+        payment_gateway: 'Cash on Delivery (COD)',
+        total_amount: grandTotal,
+        subtotal: subtotal,
+        deliveryFee: deliveryFee,
         items: cartItems.map((item) => ({
           id: item.id,
-          title: item.title,
-          price: item.price,
+          product_name: item.title || item.name,
           quantity: item.quantity,
-          image: item.image,
-        })),
-        subtotal,
-        deliveryFee,
-        total: grandTotal,
-        paymentMethod: 'Cash on Delivery (COD)',
-        createdAt: new Date().toISOString()
+          unit_price: item.price,
+          image: item.image
+        }))
       };
 
-      // 1. Submit COD order through API service
-      const checkoutResult = await submitCODCheckout(orderPayload);
-      const savedOrder = checkoutResult.order;
+      // Call submitStoreApiOrder with STORE_API_KEY
+      const result = await submitStoreApiOrder(STORE_API_KEY, orderPayload);
 
-      // 2. Save/Update customer profile preferences if logged in
-      if (customer) {
-        updateProfile({
-          name: customerInfo.name,
-          email: customerInfo.email,
-          shippingAddress
-        });
+      if (result.status === 201 || result.success) {
+        // 1. Order immediately appears in Admin POS > Online Orders
+        // 2. Automated WhatsApp confirmation is sent to customer
+        
+        // Save/Update customer profile preferences if logged in
+        if (activeCustomer) {
+          try {
+            await upsertStoreCustomerProfile({
+              phone: customerInfo.phone,
+              fullName: customerInfo.name,
+              name: customerInfo.name,
+              email: customerInfo.email,
+              address: shippingAddress.street,
+              city: shippingAddress.city,
+              state: shippingAddress.state,
+              postalCode: shippingAddress.postalCode,
+              gpsLat: shippingAddress.coordinates?.lat,
+              gpsLng: shippingAddress.coordinates?.lng
+            });
+          } catch (e) {}
+        }
+
+        // Trigger Confetti celebration
+        try {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        } catch (e) {}
+
+        const placedOrder = result.order;
+
+        // Generate WhatsApp message & URL
+        const whatsappMsg = formatWhatsAppMessage({
+          ...placedOrder,
+          orderId: placedOrder.invoice_number || placedOrder.orderId,
+          customer: {
+            name: customerInfo.name,
+            phone: customerInfo.phone,
+            email: customerInfo.email
+          },
+          deliveryMethod,
+          shippingAddress,
+          items: cartItems,
+          subtotal,
+          deliveryFee,
+          total: grandTotal
+        }, settings);
+
+        const whatsappUrl = buildWhatsAppUrl(settings.whatsappNumber, whatsappMsg);
+
+        clearCart();
+        setIsCheckoutOpen(false);
+
+        // Show Success Modal
+        if (onOrderSuccess) {
+          onOrderSuccess({
+            order: placedOrder,
+            placedOrder: placedOrder,
+            whatsappUrl,
+            whatsappMsg,
+          });
+        }
+
+        // Auto-open WhatsApp
+        try {
+          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        } catch (e) {
+          console.log('Popup handled via success screen', e);
+        }
       }
-
-      // 3. Trigger Confetti celebration
-      try {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-      } catch (e) {}
-
-      // 4. Generate WhatsApp message & URL
-      const whatsappMsg = formatWhatsAppMessage(savedOrder, settings);
-      const whatsappUrl = buildWhatsAppUrl(settings.whatsappNumber, whatsappMsg);
-
-      // 5. Clear cart & close checkout modal
-      clearCart();
-      setIsCheckoutOpen(false);
-
-      // 6. Trigger success screen with order & WhatsApp redirection
-      onOrderSuccess({
-        order: savedOrder,
-        whatsappUrl,
-        whatsappMsg,
-      });
-
-      // Auto-open WhatsApp
-      try {
-        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-      } catch (e) {
-        console.log('Popup blocked or handled via success button', e);
-      }
-
     } catch (err) {
       console.error('Order placement error:', err);
-      showToast('Failed to process COD order. Please try again.', 'error');
+      showToast('Failed to place order: ' + (err.message || 'Unknown error'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -208,7 +253,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
           <button
             onClick={() => setIsCheckoutOpen(false)}
-            className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -256,9 +301,10 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                   <input
                     type="tel"
                     placeholder="98765 43210"
+                    maxLength={10}
                     value={customerInfo.phone}
                     onChange={(e) => {
-                      setCustomerInfo({ ...customerInfo, phone: e.target.value });
+                      setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') });
                       if (errors.phone) setErrors({ ...errors, phone: null });
                     }}
                     className={`w-full pl-9 pr-3 py-2 text-xs rounded border ${
@@ -417,9 +463,9 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
           <button
             type="button"
-            onClick={handlePlaceOrder}
+            onClick={handlePlaceCodOrder}
             disabled={isSubmitting}
-            className="w-full sm:w-auto flex-1 sm:max-w-xs flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-3 px-5 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98"
+            className="w-full sm:w-auto flex-1 sm:max-w-xs flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-3 px-5 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98 cursor-pointer"
           >
             {isSubmitting ? (
               <div className="flex items-center gap-2">
@@ -429,7 +475,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             ) : (
               <>
                 <MessageCircle className="w-4 h-4 fill-white text-emerald-600" />
-                <span>Confirm Cash on Delivery</span>
+                <span>Place Cash on Delivery Order</span>
               </>
             )}
           </button>

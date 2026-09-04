@@ -1,28 +1,45 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, MessageCircle, ArrowRight, ShieldCheck, RefreshCw, CheckCircle, Smartphone } from 'lucide-react';
+import { requestStoreWhatsAppOtp, verifyStoreWhatsAppOtp } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
 export const WhatsAppLoginModal = () => {
-  const { isAuthOpen, setIsAuthOpen, otpState, sendWhatsAppOtp, verifyWhatsAppOtp } = useAuth();
+  const { isAuthOpen, setIsAuthOpen, setCurrentCustomer } = useAuth();
   const { showToast } = useToast();
 
   const [phone, setPhone] = useState('');
+  const [otpStep, setOtpStep] = useState(false);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [demoCode, setDemoCode] = useState(null);
+  const [countdown, setCountdown] = useState(300);
 
   const inputRefs = useRef([]);
 
   useEffect(() => {
+    let timer;
+    if (otpStep && countdown > 0) {
+      timer = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [otpStep, countdown]);
+
+  useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isAuthOpen) setIsAuthOpen(false);
+      if (e.key === 'Escape' && isAuthOpen) closeLoginModal();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAuthOpen, setIsAuthOpen]);
+  }, [isAuthOpen]);
 
   if (!isAuthOpen) return null;
+
+  const closeLoginModal = () => {
+    setIsAuthOpen(false);
+    setOtpStep(false);
+    setOtpDigits(['', '', '', '', '', '']);
+  };
 
   const formatMinutes = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -30,6 +47,7 @@ export const WhatsAppLoginModal = () => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  // Step A: Send OTP to customer's WhatsApp
   const handleSendOtp = async (e) => {
     e?.preventDefault();
     const cleanPhone = phone.replace(/\D/g, '');
@@ -40,14 +58,16 @@ export const WhatsAppLoginModal = () => {
 
     setLoading(true);
     try {
-      const res = await sendWhatsAppOtp(cleanPhone);
+      const res = await requestStoreWhatsAppOtp(cleanPhone);
       setDemoCode(res.otp);
-      showToast(`WhatsApp OTP sent! (Code: ${res.otp})`, 'success');
+      setOtpStep(true); // show the 6-digit input box
+      setCountdown(300);
+      showToast(`6-digit OTP sent to your WhatsApp! (Code: ${res.otp})`, 'success');
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 100);
     } catch (err) {
-      showToast('Failed to send WhatsApp OTP', 'error');
+      showToast(err.message || 'Failed to send WhatsApp OTP', 'error');
     } finally {
       setLoading(false);
     }
@@ -71,6 +91,7 @@ export const WhatsAppLoginModal = () => {
     }
   };
 
+  // Step B: Customer enters the 6-digit code
   const handleVerifyOtp = async (e) => {
     e?.preventDefault();
     const fullOtp = otpDigits.join('');
@@ -81,14 +102,15 @@ export const WhatsAppLoginModal = () => {
 
     setLoading(true);
     try {
-      const res = await verifyWhatsAppOtp(fullOtp);
-      if (res.success) {
-        showToast('WhatsApp verification successful!', 'success');
-      } else {
-        showToast(res.error || 'Invalid OTP', 'error');
-      }
+      const cleanPhone = phone.replace(/\D/g, '');
+      const res = await verifyStoreWhatsAppOtp(cleanPhone, fullOtp);
+      // Save session in localStorage
+      localStorage.setItem('customer_session', JSON.stringify(res.customer));
+      setCurrentCustomer(res.customer);
+      showToast('WhatsApp verification successful!', 'success');
+      closeLoginModal();
     } catch (err) {
-      showToast('Verification failed', 'error');
+      showToast('Invalid OTP code. Please check your WhatsApp.', 'error');
     } finally {
       setLoading(false);
     }
@@ -99,7 +121,7 @@ export const WhatsAppLoginModal = () => {
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in"
-        onClick={() => setIsAuthOpen(false)}
+        onClick={closeLoginModal}
       />
 
       {/* Modern White Minimalist Modal Card */}
@@ -107,13 +129,13 @@ export const WhatsAppLoginModal = () => {
         
         {/* Close Button */}
         <button
-          onClick={() => setIsAuthOpen(false)}
+          onClick={closeLoginModal}
           className="absolute top-4 right-4 p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {!otpState.sent ? (
+        {!otpStep ? (
           /* Step 1: Mobile Number Input */
           <div className="space-y-6">
             <div className="text-center space-y-2">
@@ -181,7 +203,7 @@ export const WhatsAppLoginModal = () => {
                 Enter WhatsApp OTP
               </h2>
               <p className="text-xs text-slate-500">
-                Code sent to <strong className="text-slate-800">+91 {otpState.phone}</strong>
+                Code sent to <strong className="text-slate-800">+91 {phone}</strong>
               </p>
             </div>
 
@@ -196,7 +218,7 @@ export const WhatsAppLoginModal = () => {
                     const digits = demoCode.split('');
                     setOtpDigits(digits);
                   }}
-                  className="ml-2 text-[10px] font-bold text-emerald-700 underline"
+                  className="ml-2 text-[10px] font-bold text-emerald-700 underline cursor-pointer"
                 >
                   Auto Fill
                 </button>
@@ -223,11 +245,11 @@ export const WhatsAppLoginModal = () => {
               {/* Countdown & Resend */}
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>
-                  Expires in: <strong className="text-slate-800">{formatMinutes(otpState.countdown)}</strong>
+                  Expires in: <strong className="text-slate-800">{formatMinutes(countdown)}</strong>
                 </span>
                 <button
                   type="button"
-                  disabled={otpState.countdown > 0}
+                  disabled={countdown > 0}
                   onClick={handleSendOtp}
                   className="font-bold text-emerald-700 hover:text-emerald-800 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
                 >
