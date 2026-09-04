@@ -12,7 +12,7 @@ export const DEFAULT_STORE_API_KEY = 'xyvot_pk_live_8d59e2_n4tuqdx7wivkrw';
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Fetch real products from Supabase products table
+ * Fetch real products dynamically from Supabase database
  */
 export async function fetchLiveProductsFromBackend() {
   try {
@@ -21,33 +21,67 @@ export async function fetchLiveProductsFromBackend() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data && data.length > 0) {
-      return data.map((p) => ({
-        id: p.id,
-        title: p.name || p.title,
-        category: p.category || 'General',
-        price: parseFloat(p.price || p.selling_price || p.unit_price) || 0,
-        originalPrice: p.original_price || p.mrp || (parseFloat(p.price) ? parseFloat(p.price) * 1.2 : null),
-        rating: p.rating || 4.9,
-        reviewsCount: p.reviews_count || 48,
-        stock: parseInt(p.stock_quantity ?? p.stock ?? 10),
-        badge: p.stock_quantity <= 3 && p.stock_quantity > 0 ? 'Low Stock' : (p.badge || (p.featured ? 'Featured' : null)),
-        image: p.image_url || p.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
-        images: p.images && Array.isArray(p.images) && p.images.length > 0
-          ? p.images
-          : [p.image_url || p.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80'],
-        description: p.description || `${p.name || 'Premium Product'} - High quality product ready for immediate dispatch.`,
-        features: p.features || ['Verified Authentic Product', 'Quick Dispatch & Secure Packaging', 'Direct WhatsApp Support']
-      }));
+    if (!error && Array.isArray(data)) {
+      return data.map((p) => {
+        const price = parseFloat(p.price ?? p.selling_price ?? p.unit_price ?? 0);
+        const originalPrice = p.original_price ? parseFloat(p.original_price) : (p.mrp ? parseFloat(p.mrp) : null);
+        const stock = parseInt(p.stock_quantity ?? p.stock ?? 0, 10);
+        
+        // Image fallbacks
+        const primaryImage = p.image_url || p.image || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80';
+        const imageList = Array.isArray(p.images) && p.images.length > 0 ? p.images : [primaryImage];
+
+        return {
+          id: p.id,
+          title: p.name || p.title || 'Product Item',
+          category: p.category || 'General',
+          price: isNaN(price) ? 0 : price,
+          originalPrice: originalPrice && !isNaN(originalPrice) ? originalPrice : null,
+          rating: parseFloat(p.rating) || 4.9,
+          reviewsCount: parseInt(p.reviews_count ?? 48, 10),
+          stock: isNaN(stock) ? 0 : stock,
+          badge: stock <= 3 && stock > 0 ? 'Low Stock' : (p.badge || (p.featured ? 'Featured' : null)),
+          image: primaryImage,
+          images: imageList,
+          description: p.description || `${p.name || 'Authentic Product'} - Premium quality product ready for direct dispatch.`,
+          features: Array.isArray(p.features) && p.features.length > 0 
+            ? p.features 
+            : ['100% Genuine & Authentic', 'Quick Dispatch with Live Tracking', 'Direct WhatsApp Support']
+        };
+      });
     }
   } catch (err) {
-    console.warn('Could not query live Supabase products table:', err);
+    console.error('Error fetching live products from Supabase:', err);
+  }
+  return [];
+}
+
+/**
+ * Fetch real store organization info from database
+ */
+export async function fetchStoreInfoFromBackend() {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('name, owner_phone, owner_email')
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data) {
+      return {
+        storeName: data.name || 'Store Hub',
+        whatsappNumber: data.owner_phone || '+91 9147364980',
+        supportEmail: data.owner_email || ''
+      };
+    }
+  } catch (err) {
+    console.warn('Could not fetch store organization info:', err);
   }
   return null;
 }
 
 /**
- * Submit order to backend sales_orders table
+ * Submit real order to backend sales_orders table
  */
 export async function submitBackendOrder(orderPayload) {
   try {

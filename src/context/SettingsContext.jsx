@@ -2,19 +2,21 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const SettingsContext = createContext();
 
+import { fetchStoreInfoFromBackend } from '../services/supabaseStore';
+
 const DEFAULT_SETTINGS = {
-  storeName: 'NEXUS Essentials',
-  tagline: 'Frictionless Modern Commerce',
-  whatsappNumber: '+91 9147364980', // configured shop whatsapp
+  storeName: 'Storefront',
+  tagline: 'Direct WhatsApp Ordering',
+  whatsappNumber: '+91 9147364980',
   currency: '₹',
-  storeAddress: 'Plot 42, Sector 18, Commercial Hub, Gurugram, HR 122008',
-  storeHours: 'Mon - Sat: 10:00 AM - 8:30 PM (Sun: 11:00 AM - 6:00 PM)',
+  storeAddress: 'Main Store Hub',
+  storeHours: 'Mon - Sat: 9:00 AM - 8:00 PM',
   freeShippingThreshold: 999,
   flatShippingFee: 79.00,
   firebaseConfigured: false,
 };
 
-const STORAGE_KEY = 'quickcart_store_settings_inr_v2';
+const STORAGE_KEY = 'quickcart_store_settings_live';
 
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
@@ -28,6 +30,19 @@ export const SettingsProvider = ({ children }) => {
   });
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    // Dynamically fetch store organization name from database
+    fetchStoreInfoFromBackend().then((info) => {
+      if (info && info.storeName) {
+        setSettings((prev) => ({
+          ...prev,
+          storeName: info.storeName || prev.storeName,
+          whatsappNumber: info.whatsappNumber || prev.whatsappNumber
+        }));
+      }
+    });
+  }, []);
 
   useEffect(() => {
     try {
