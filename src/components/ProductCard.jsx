@@ -34,29 +34,31 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           </div>
         )}
 
-        {/* Delivery / Fast Dispatch Tag */}
+        {/* Stock Quantity Badge (Replacing 10min) */}
         <div className="absolute top-1.5 left-1.5 z-10 flex flex-col gap-1">
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-slate-900/85 text-white backdrop-blur-xs">
-            <Clock className="w-2.5 h-2.5 text-emerald-400" />
-            10 MINS
-          </span>
+          {isOutOfStock ? (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-900/90 text-rose-100 border border-rose-500/30 shadow-xs">
+              <XCircle className="w-2.5 h-2.5 text-rose-300" />
+              Out of Stock
+            </span>
+          ) : isLowStock ? (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-900/90 text-amber-100 border border-amber-500/30 shadow-xs">
+              <AlertTriangle className="w-2.5 h-2.5 text-amber-300" />
+              {product.stock} in stock
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-slate-900/85 text-white backdrop-blur-xs shadow-xs">
+              <Check className="w-2.5 h-2.5 text-emerald-400" />
+              {product.stock} in stock
+            </span>
+          )}
+
           {product.badge && (
             <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
               {product.badge}
             </span>
           )}
         </div>
-
-        {/* Stock Alert Badge */}
-        {isOutOfStock ? (
-          <span className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
-            Sold Out
-          </span>
-        ) : isLowStock ? (
-          <span className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-            {product.stock} left
-          </span>
-        ) : null}
       </div>
 
       {/* Product Details Area (Compact Density) */}
