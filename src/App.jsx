@@ -22,6 +22,7 @@ import {
   RefreshCw,
   ShoppingBag
 } from 'lucide-react';
+import { smartSearchProducts } from './utils/searchHelper';
 
 export function App() {
   const { settings } = useSettings();
@@ -71,32 +72,29 @@ export function App() {
     }, 400);
   };
 
-  // Filter & Sort computation
+  // Filter & Sort computation with Smart Typo-Tolerant Search
   const filteredProducts = useMemo(() => {
-    return products
-      .filter((p) => {
-        // Category filter
-        const matchesCategory =
-          selectedCategory === 'All Products' ||
-          (p.category && p.category.toLowerCase() === selectedCategory.toLowerCase());
+    // 1. Filter by category
+    const categoryFiltered = products.filter((p) => {
+      return (
+        selectedCategory === 'All Products' ||
+        (p.category && p.category.toLowerCase() === selectedCategory.toLowerCase())
+      );
+    });
 
-        // Search query filter
-        const query = searchQuery.toLowerCase().trim();
-        const matchesSearch =
-          !query ||
-          p.title.toLowerCase().includes(query) ||
-          (p.description && p.description.toLowerCase().includes(query)) ||
-          (p.category && p.category.toLowerCase().includes(query));
+    // 2. Apply smart typo-tolerant fuzzy search
+    const searched = searchQuery.trim()
+      ? smartSearchProducts(categoryFiltered, searchQuery)
+      : categoryFiltered;
 
-        return matchesCategory && matchesSearch;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'price-low') return a.price - b.price;
-        if (sortBy === 'price-high') return b.price - a.price;
-        if (sortBy === 'rating') return b.rating - a.rating;
-        if (sortBy === 'stock') return b.stock - a.stock;
-        return 0; // featured default
-      });
+    // 3. Apply sorting (if explicit sort chosen, otherwise preserve relevance)
+    return [...searched].sort((a, b) => {
+      if (sortBy === 'price-low') return a.price - b.price;
+      if (sortBy === 'price-high') return b.price - a.price;
+      if (sortBy === 'rating') return b.rating - a.rating;
+      if (sortBy === 'stock') return b.stock - a.stock;
+      return 0; // relevance / featured default
+    });
   }, [products, selectedCategory, searchQuery, sortBy]);
 
   const inStockCount = products.filter((p) => p.stock > 0).length;
