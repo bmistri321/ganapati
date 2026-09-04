@@ -184,41 +184,41 @@ export function App() {
               {/* Right Column: High-Density Product Catalog */}
               <div className="flex-1 w-full space-y-4">
                 
-                {/* Department Header & Sort Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded border border-slate-200/90 shadow-xs">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                      {selectedCategory === 'All Products' && !searchQuery.trim() ? 'All Products' : selectedCategory}
-                    </h1>
-                    <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                      {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
-                    </span>
-                    {selectedCategory !== 'All Products' && (
+                {/* Department Header & Sort Bar (Clean & Transparent) */}
+                {(selectedCategory !== 'All Products' || searchQuery.trim()) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                        {selectedCategory}
+                      </h1>
+                      <span className="text-xs font-semibold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded">
+                        {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
+                      </span>
                       <button
                         onClick={() => setSelectedCategory('All Products')}
                         className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded transition-colors"
                       >
                         Clear Filter &times;
                       </button>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Sorting dropdown */}
-                  <div className="flex items-center gap-2 self-end sm:self-auto bg-slate-50 border border-slate-200 rounded px-2.5 py-1 shadow-xs">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="text-xs font-bold text-slate-700 bg-transparent outline-none cursor-pointer"
-                    >
-                      <option value="featured">Featured First</option>
-                      <option value="price-low">Price: Low to High</option>
-                      <option value="price-high">Price: High to Low</option>
-                      <option value="rating">Highest Rated</option>
-                      <option value="stock">Most in Stock</option>
-                    </select>
+                    {/* Sorting dropdown */}
+                    <div className="flex items-center gap-2 self-end sm:self-auto bg-white border border-slate-200 rounded px-2.5 py-1 shadow-xs">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="text-xs font-bold text-slate-700 bg-transparent outline-none cursor-pointer"
+                      >
+                        <option value="featured">Featured First</option>
+                        <option value="price-low">Price: Low to High</option>
+                        <option value="price-high">Price: High to Low</option>
+                        <option value="rating">Highest Rated</option>
+                        <option value="stock">Most in Stock</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Products Grid */}
                 {loading ? (
