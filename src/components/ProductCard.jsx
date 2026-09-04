@@ -16,9 +16,9 @@ export const ProductCard = ({ product, onSelectProduct }) => {
   return (
     <div className="group relative bg-white rounded border border-slate-200/90 hover:border-emerald-400 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden">
       
-      {/* Product Image Area */}
+      {/* Product Image Area (Full Area Fill) */}
       <div 
-        className="relative aspect-square w-full bg-slate-50 overflow-hidden cursor-pointer flex items-center justify-center p-2"
+        className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
         onClick={() => onSelectProduct(product)}
       >
         {product.image ? (
@@ -26,10 +26,10 @@ export const ProductCard = ({ product, onSelectProduct }) => {
             src={product.image}
             alt={product.title}
             loading="lazy"
-            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-100">
             <Package className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400 group-hover:text-emerald-600 transition-colors" />
           </div>
         )}

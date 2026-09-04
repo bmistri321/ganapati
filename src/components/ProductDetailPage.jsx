@@ -101,15 +101,15 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
             
             {/* Gallery Column (6 cols) */}
             <div className="lg:col-span-6 space-y-4">
-              <div className="relative aspect-square w-full rounded overflow-hidden bg-white border border-slate-200 shadow-inner flex items-center justify-center p-4">
+              <div className="relative aspect-square w-full rounded overflow-hidden bg-slate-100 border border-slate-200 shadow-inner flex items-center justify-center">
                 {selectedImage ? (
                   <img
                     src={selectedImage}
                     alt={product.title}
-                    className="w-full h-full object-contain transition-all duration-300"
+                    className="w-full h-full object-cover object-center transition-all duration-300"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center text-slate-400 p-8">
+                  <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 p-8">
                     <Package className="w-20 h-20 text-slate-400" />
                     <span className="text-xs font-semibold text-slate-500 mt-3 text-center uppercase tracking-wider">
                       {product.category || 'Inventory Item'}
@@ -136,13 +136,13 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
                     <button
                       key={idx}
                       onClick={() => setSelectedImage(img)}
-                      className={`relative w-20 h-20 rounded overflow-hidden flex-shrink-0 border-2 transition-all bg-white p-1 flex items-center justify-center ${
+                      className={`relative w-20 h-20 rounded overflow-hidden flex-shrink-0 border-2 transition-all ${
                         selectedImage === img
                           ? 'border-emerald-600 ring-2 ring-emerald-500/30 opacity-100'
                           : 'border-slate-200 opacity-70 hover:opacity-100'
                       }`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-contain" />
+                      <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

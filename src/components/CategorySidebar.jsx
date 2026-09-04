@@ -82,7 +82,7 @@ export const CategorySidebar = ({
                     <img
                       src={cat.image}
                       alt={cat.displayName}
-                      className="w-full h-full object-contain p-0.5"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
                     <Package className="w-5 h-5 text-slate-400 group-hover:text-emerald-600" />
