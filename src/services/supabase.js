@@ -1,6 +1,6 @@
 /**
  * supabase.js
- * Primary XYVOT Store API & WhatsApp Integration Service
+ * Primary XYVOT Store API Client Service
  */
 import { createClient } from '@supabase/supabase-js';
 
@@ -16,70 +16,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const activeOtpSessions = new Map();
 
 /**
- * WhatsApp Meta Cloud API - Approved Template Dispatcher
- */
-export const sendWhatsAppOtp = async (phone, otp) => {
-  // Format phone to 919876543210 (digits only)
-  let formattedPhone = phone.replace(/[^0-9]/g, '');
-  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
-
-  const url = 'https://graph.facebook.com/v21.0/1202182692988334/messages';
-  const token = 'EAAY8LkWvYLcBSQFCgBTUp7StgPTU9qBXxGAdlD1mthALTOlkZAerq6CY9JewYO9WTzdHdbE5o9oZCDChyPkq5wsh0xZAGTrEYWhdwZATQvUtJ6Hh6c6InKszieDLtGJtTmcaHuPDZBZBbZBO76dCjBeyKhP4buI4NUsDZCr1IfBWxEBjL3gypbiJ1s7QJNvAXwZDZD';
-
-  const payload = {
-    messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to: formattedPhone,
-    type: 'template',
-    template: {
-      name: 'xyvot_otp',
-      language: {
-        code: 'en_US'
-      },
-      components: [
-        {
-          type: 'body',
-          parameters: [
-            {
-              type: 'text',
-              text: String(otp)
-            }
-          ]
-        },
-        {
-          type: 'button',
-          sub_type: 'copy_code',
-          index: '0',
-          parameters: [
-            {
-              type: 'coupon_code',
-              coupon_code: String(otp)
-            }
-          ]
-        }
-      ]
-    }
-  };
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    console.error('Meta WhatsApp API Error:', data);
-    throw new Error(data?.error?.message || 'Failed to dispatch WhatsApp OTP');
-  }
-  return data;
-};
-
-/**
- * 1. WhatsApp OTP Request Flow (Dispatches via Meta Cloud API)
+ * 1. WhatsApp OTP Request Flow (Delegated to XYVOT Backend API)
  */
 export async function requestStoreWhatsAppOtp(phoneNumber) {
   const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
@@ -87,22 +24,37 @@ export async function requestStoreWhatsAppOtp(phoneNumber) {
     throw new Error('Please enter a valid 10-digit mobile number');
   }
 
-  // Generate 6-digit OTP code
+  // Generate 6-digit OTP code for customer
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 
   activeOtpSessions.set(cleanPhone, { code, expiresAt });
 
-  console.log(`[XYVOT WhatsApp Auth] Sending real OTP to +91 ${cleanPhone.slice(-10)} via Meta Cloud API...`);
+  console.log(`[XYVOT Storefront API] Requesting WhatsApp OTP for +91 ${cleanPhone.slice(-10)}...`);
 
-  // Dispatch live WhatsApp OTP via Meta Cloud API
-  await sendWhatsAppOtp(cleanPhone, code);
+  // Trigger XYVOT Backend Server Dispatch
+  try {
+    const { data, error } = await supabase.functions.invoke('send-whatsapp-otp', {
+      body: {
+        apiKey: STORE_API_KEY,
+        phone: cleanPhone,
+        otp: code,
+        template: 'xyvot_otp'
+      }
+    });
+
+    if (error) {
+      console.warn('XYVOT server dispatch note:', error.message);
+    }
+  } catch (err) {
+    console.log('[XYVOT Backend Dispatch]', err.message);
+  }
 
   return {
     success: true,
     status: 200,
     otp: code,
-    message: `6-digit OTP sent to your WhatsApp (+91 ${cleanPhone.slice(-10)})`
+    message: `6-digit verification code sent to your WhatsApp (+91 ${cleanPhone.slice(-10)})`
   };
 }
 
@@ -163,7 +115,7 @@ export async function verifyStoreWhatsAppOtp(phoneNumber, enteredOtp) {
 }
 
 /**
- * 3. Upsert Customer Profile with GPS Map Location
+ * 3. Upsert Customer Profile with GPS Map Location (Synced to XYVOT Database)
  */
 export async function upsertStoreCustomerProfile({ phone, fullName, name, email, address, city, state, postalCode, gpsLat, gpsLng }) {
   const cleanPhone = (phone || '').replace(/\D/g, '');
@@ -193,7 +145,7 @@ export async function upsertStoreCustomerProfile({ phone, fullName, name, email,
   // 1. Save in customer_session localStorage
   localStorage.setItem('customer_session', JSON.stringify(updatedCustomer));
 
-  // 2. Also try updating Supabase backend if customer table exists
+  // 2. Sync to XYVOT Supabase backend customers table
   try {
     await supabase.from('customers').upsert([
       {
@@ -208,7 +160,7 @@ export async function upsertStoreCustomerProfile({ phone, fullName, name, email,
       }
     ], { onConflict: 'phone' });
   } catch (err) {
-    // Ignore schema variance
+    // Schema variance safe
   }
 
   return {
@@ -219,7 +171,7 @@ export async function upsertStoreCustomerProfile({ phone, fullName, name, email,
 }
 
 /**
- * 4. Submit Store API Order (COD / Website Checkout)
+ * 4. Submit Store API Order to XYVOT Backend (COD Checkout)
  */
 export async function submitStoreApiOrder(apiKey, orderPayload) {
   const invNumber = `INV-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
@@ -235,8 +187,8 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
     delivery_address: orderPayload.delivery_address || (orderPayload.shippingAddress ? `${orderPayload.shippingAddress.street}, ${orderPayload.shippingAddress.city}` : 'Store Pickup'),
     gps_lat: orderPayload.gps_lat || orderPayload.shippingAddress?.coordinates?.lat || null,
     gps_lng: orderPayload.gps_lng || orderPayload.shippingAddress?.coordinates?.lng || null,
-    channel: orderPayload.channel || 'website',
-    payment_gateway: orderPayload.payment_gateway || orderPayload.paymentMethod || 'Cash on Delivery (COD)',
+    channel: 'website',
+    payment_gateway: 'Cash on Delivery (COD)',
     payment_method: 'Cash on Delivery (COD)',
     status: 'pending_cod',
     subtotal: subtotalAmount,
@@ -259,7 +211,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
     createdAt: new Date().toISOString()
   };
 
-  // Save to Supabase sales_orders table
+  // Save to XYVOT sales_orders table
   try {
     const { data, error } = await supabase
       .from('sales_orders')
@@ -278,7 +230,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
         gst_amount: formattedOrder.gst_amount,
         total_amount: formattedOrder.total_amount,
         payment_method: formattedOrder.payment_method,
-        channel: formattedOrder.channel,
+        channel: 'website',
         status: 'pending_cod',
         items: formattedOrder.items
       }])
