@@ -89,76 +89,25 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
             
             {/* 1. Profile State: User (Logged Out) or UserCheck (Logged In) */}
             {customer ? (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  title={`Logged in as ${customer.name || customer.fullName || 'Customer'}`}
-                  className="relative p-2 rounded-full hover:bg-slate-100 text-slate-900 transition-all flex items-center justify-center active:scale-95"
-                >
-                  <UserCheck className="w-6 h-6 stroke-[1.8] text-slate-900" />
-                </button>
-
-                {/* Dropdown Menu */}
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded border border-slate-200 shadow-xl py-1.5 z-50 animate-fade-in divide-y divide-slate-100 text-xs">
-                    <div className="px-3.5 py-2.5 bg-slate-50">
-                      <p className="font-bold text-slate-900 truncate">{customer.name || customer.fullName || 'Verified Customer'}</p>
-                      <p className="text-[11px] text-slate-500 font-mono">+91 {customer.phone}</p>
-                    </div>
-
-                    <div className="py-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          setIsOrdersOpen(true);
-                        }}
-                        className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 font-medium text-slate-700 transition-colors"
-                      >
-                        <FileText className="w-4 h-4 text-emerald-600" />
-                        <span>My Orders & Invoices</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          setIsProfileOpen(true);
-                        }}
-                        className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 font-medium text-slate-700 transition-colors"
-                      >
-                        <MapPin className="w-4 h-4 text-emerald-600" />
-                        <span>GPS Delivery Address</span>
-                      </button>
-                    </div>
-
-                    <div className="py-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          logout();
-                        }}
-                        className="w-full text-left px-3.5 py-2 hover:bg-rose-50 flex items-center gap-2.5 font-medium text-rose-600 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen(true)}
+                title={`Profile: ${customer.name || customer.fullName || 'Customer'}`}
+                className="relative p-2 rounded-full hover:bg-slate-100 text-slate-900 transition-all flex items-center justify-center active:scale-95 cursor-pointer"
+              >
+                <UserCheck className="w-6 h-6 stroke-[1.8] text-slate-900" />
+              </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setIsAuthOpen(true)}
                 title="WhatsApp Quick Login"
-                className="relative p-2 rounded-full hover:bg-slate-100 text-slate-900 transition-all flex items-center justify-center active:scale-95"
+                className="relative p-2 rounded-full hover:bg-slate-100 text-slate-900 transition-all flex items-center justify-center active:scale-95 cursor-pointer"
               >
                 <User className="w-6 h-6 stroke-[1.8] text-slate-900" />
               </button>
             )}
+
 
             {/* 2. Cart State: ShoppingCart (Empty) or ShoppingCart with Black Badge (Active) */}
             <button
