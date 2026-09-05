@@ -127,41 +127,58 @@ export function App() {
         />
       ) : (
         <>
-          {/* Hero Section */}
-          <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 text-white py-10 sm:py-14 px-4 sm:px-6 lg:px-8">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+          {/* Hero Section (Light Version matching Ganapati Store) */}
+          <section className="relative overflow-hidden bg-gradient-to-b from-white via-emerald-50/30 to-slate-50 border-b border-slate-200/80 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+            <div className="absolute inset-0 opacity-[0.12] bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
             
             <div className="max-w-7xl mx-auto relative z-10">
               <div className="max-w-3xl space-y-3 sm:space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold backdrop-blur-md">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Real-Time Inventory &bull; WhatsApp OTP Login &bull; Cash on Delivery</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/70 border border-emerald-200/80 text-emerald-800 text-xs font-bold shadow-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Fresh Groceries &bull; Live Inventory &bull; WhatsApp COD</span>
                 </div>
 
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white">
-                  Fast & Seamless Shopping,{' '}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-                    Direct WhatsApp Dispatch.
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-slate-900">
+                  Ganapati Store{' '}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">
+                    &bull; Daily Essentials & Staples
                   </span>
                 </h1>
 
-                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
-                  Browse our verified stock, pinpoint your exact GPS location on the interactive map, and place Cash on Delivery orders with instant WhatsApp confirmation.
+                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
+                  Order authentic groceries, staples, spices, and fresh household essentials. Enjoy live stock availability, GPS map pinpointing for doorstep delivery, and 100% verified Cash on Delivery.
                 </p>
 
                 {/* Value Props */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 pt-2 text-xs font-medium text-slate-300">
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded backdrop-blur-xs">
-                    <MessageCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                    <span>WhatsApp OTP Auth</span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-2 text-xs font-semibold text-slate-700">
+                  <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 p-2.5 sm:p-3 rounded-lg shadow-xs hover:border-emerald-300 transition-colors">
+                    <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">WhatsApp OTP</p>
+                      <p className="text-[10px] text-slate-500 font-normal">Instant 1-Click Login</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded backdrop-blur-xs">
-                    <Truck className="w-4 h-4 text-teal-400 flex-shrink-0" />
-                    <span>GPS Map Delivery Pin</span>
+                  
+                  <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 p-2.5 sm:p-3 rounded-lg shadow-xs hover:border-emerald-300 transition-colors">
+                    <div className="w-7 h-7 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0">
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">GPS Map Pin</p>
+                      <p className="text-[10px] text-slate-500 font-normal">Accurate Doorstep Drop</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded backdrop-blur-xs col-span-2 sm:col-span-1">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                    <span>Cash on Delivery (COD)</span>
+
+                  <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 p-2.5 sm:p-3 rounded-lg shadow-xs hover:border-emerald-300 transition-colors col-span-2 sm:col-span-1">
+                    <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Cash on Delivery</p>
+                      <p className="text-[10px] text-slate-500 font-normal">Pay When Delivered</p>
+                    </div>
                   </div>
                 </div>
               </div>

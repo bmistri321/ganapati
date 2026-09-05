@@ -26,13 +26,14 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
       {/* Top micro banner */}
-      <div className="bg-slate-900 text-slate-200 text-[11px] sm:text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
-        <span className="inline-flex items-center gap-1">
-          Direct WhatsApp Verification &bull; Cash on Delivery (COD)
+      <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-950 text-[11px] sm:text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
+        <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-900">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+          Ganapati Store &bull; Direct WhatsApp Order Dispatch
         </span>
-        <span className="hidden md:inline text-slate-600">|</span>
-        <span className="hidden md:inline text-emerald-400 font-bold">
-          Free shipping on orders over {settings.currency}{settings.freeShippingThreshold}
+        <span className="hidden md:inline text-emerald-300">|</span>
+        <span className="hidden md:inline text-emerald-800 font-bold">
+          Free delivery on orders over {settings.currency}{settings.freeShippingThreshold} &bull; Cash on Delivery
         </span>
       </div>
 
