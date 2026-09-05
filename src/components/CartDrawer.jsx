@@ -132,13 +132,13 @@ export const CartDrawer = () => {
                     key={item.id}
                     className="flex gap-3.5 items-center"
                   >
-                    {/* Thumbnail */}
-                    <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#F4F5F7] flex items-center justify-center flex-shrink-0 p-2">
+                    {/* Thumbnail (100% Full Fill Edge-to-Edge) */}
+                    <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0">
                       {item.image ? (
                         <img
                           src={item.image}
                           alt={item.title}
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <Package className="w-8 h-8 text-slate-400" />
