@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, MessageCircle, ArrowRight, ShieldCheck, RefreshCw, CheckCircle, Smartphone } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, Smartphone } from 'lucide-react';
 import { requestStoreWhatsAppOtp, verifyStoreWhatsAppOtp } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -12,7 +12,6 @@ export const WhatsAppLoginModal = () => {
   const [otpStep, setOtpStep] = useState(false);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
-  const [demoCode, setDemoCode] = useState(null);
   const [countdown, setCountdown] = useState(300);
 
   const inputRefs = useRef([]);
@@ -58,13 +57,13 @@ export const WhatsAppLoginModal = () => {
 
     setLoading(true);
     try {
-      const res = await requestStoreWhatsAppOtp(cleanPhone);
-      setOtpStep(true); // show the 6-digit input box
+      await requestStoreWhatsAppOtp(cleanPhone);
+      setOtpStep(true);
       setCountdown(300);
       showToast('6-digit OTP sent to your WhatsApp!', 'success');
       setTimeout(() => {
         inputRefs.current[0]?.focus();
-      }, 100);
+      }, 150);
     } catch (err) {
       showToast(err.message || 'Failed to send WhatsApp OTP', 'error');
     } finally {
@@ -78,9 +77,17 @@ export const WhatsAppLoginModal = () => {
     newOtp[index] = value.substring(value.length - 1);
     setOtpDigits(newOtp);
 
-    // Auto-advance
+    // Auto-advance to next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-verify if all 6 digits are entered
+    if (index === 5 && value) {
+      const fullOtp = newOtp.join('');
+      if (fullOtp.length === 6) {
+        verifyCode(fullOtp);
+      }
     }
   };
 
@@ -90,20 +97,27 @@ export const WhatsAppLoginModal = () => {
     }
   };
 
-  // Step B: Customer enters the 6-digit code
-  const handleVerifyOtp = async (e) => {
-    e?.preventDefault();
-    const fullOtp = otpDigits.join('');
-    if (fullOtp.length !== 6) {
-      showToast('Please enter the complete 6-digit OTP', 'warning');
-      return;
-    }
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pastedData) return;
 
+    const newDigits = pastedData.split('').concat(Array(6).fill('')).slice(0, 6);
+    setOtpDigits(newDigits);
+
+    const nextIndex = Math.min(pastedData.length, 5);
+    inputRefs.current[nextIndex]?.focus();
+
+    if (pastedData.length === 6) {
+      verifyCode(pastedData);
+    }
+  };
+
+  const verifyCode = async (codeToVerify) => {
     setLoading(true);
     try {
       const cleanPhone = phone.replace(/\D/g, '');
-      const res = await verifyStoreWhatsAppOtp(cleanPhone, fullOtp);
-      // Save session in localStorage
+      const res = await verifyStoreWhatsAppOtp(cleanPhone, codeToVerify);
       localStorage.setItem('customer_session', JSON.stringify(res.customer));
       setCurrentCustomer(res.customer);
       showToast('WhatsApp verification successful!', 'success');
@@ -115,48 +129,59 @@ export const WhatsAppLoginModal = () => {
     }
   };
 
+  // Step B: Manual click verify
+  const handleVerifyOtp = async (e) => {
+    e?.preventDefault();
+    const fullOtp = otpDigits.join('');
+    if (fullOtp.length !== 6) {
+      showToast('Please enter the complete 6-digit OTP', 'warning');
+      return;
+    }
+    await verifyCode(fullOtp);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in"
         onClick={closeLoginModal}
       />
 
-      {/* Modern White Minimalist Modal Card */}
-      <div className="relative bg-white rounded shadow-2xl max-w-md w-full overflow-hidden z-10 animate-slide-up border border-slate-200/90 my-auto p-6 sm:p-8">
+      {/* Mobile-First Bottom Sheet / Modern Modal Card */}
+      <div className="relative bg-white rounded-t-[32px] sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden z-10 animate-slide-up border-t sm:border border-slate-200/90 p-6 sm:p-8 pb-8 flex flex-col justify-between max-h-[90vh]">
         
+        {/* Mobile Pull/Drag Handle */}
+        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-5 sm:hidden" />
+
         {/* Close Button */}
         <button
           onClick={closeLoginModal}
-          className="absolute top-4 right-4 p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          className="absolute top-5 right-5 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         {!otpStep ? (
-          /* Step 1: Mobile Number Input */
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100 shadow-xs">
-                <MessageCircle className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                WhatsApp Quick Login
+          /* Step 1: Mobile Phone Number Input */
+          <div className="space-y-6 pt-2 sm:pt-0">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                Login
               </h2>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Enter your WhatsApp number to receive an instant 6-digit verification code. No passwords required.
+              <p className="text-xs text-slate-500 mt-1.5">
+                Enter your WhatsApp number to receive an instant 6-digit verification code.
               </p>
             </div>
 
             <form onSubmit={handleSendOtp} className="space-y-4">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                  WhatsApp Number
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Mobile Number
                 </label>
                 <div className="relative flex items-center">
-                  <span className="absolute left-3 text-xs font-bold text-slate-500 select-none">
-                    🇮🇳 +91
+                  <span className="absolute left-3.5 text-sm font-semibold text-slate-500 select-none">
+                    +91
                   </span>
                   <input
                     type="tel"
@@ -164,7 +189,7 @@ export const WhatsAppLoginModal = () => {
                     placeholder="98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                    className="w-full pl-16 pr-3 py-2.5 text-sm font-semibold rounded border border-slate-300 focus:border-emerald-600 outline-none transition-colors"
+                    className="w-full pl-14 pr-3.5 py-3 text-sm font-semibold bg-[#F4F5F7] hover:bg-[#EAECEF] focus:bg-white rounded-xl border border-transparent focus:border-slate-400 outline-none transition-all"
                     autoFocus
                   />
                 </div>
@@ -173,75 +198,72 @@ export const WhatsAppLoginModal = () => {
               <button
                 type="submit"
                 disabled={loading || phone.length < 10}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3 px-4 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98"
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Send WhatsApp OTP</span>
+                    <span>Continue</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
-
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Safe & Secure WhatsApp Authentication</span>
-            </div>
           </div>
         ) : (
-          /* Step 2: 6-Digit OTP Verification */
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100 shadow-xs">
-                <Smartphone className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                Enter WhatsApp OTP
+          /* Step 2: 6-Digit OTP Soft-Box Verification (Exact Match to Figma Concept) */
+          <div className="space-y-7 pt-2 sm:pt-0">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                Login
               </h2>
-              <p className="text-xs text-slate-500">
-                A 6-digit verification code has been sent to <strong className="text-slate-800">+91 {phone}</strong>
+              <p className="text-xs text-slate-500 mt-1.5">
+                Enter the 6-digit code sent to <strong className="text-slate-800">+91 {phone}</strong>
               </p>
             </div>
 
-            <form onSubmit={handleVerifyOtp} className="space-y-5">
-              {/* 6 Inputs */}
-              <div className="flex justify-between gap-2">
+            <form onSubmit={handleVerifyOtp} className="space-y-6">
+              {/* 6 Soft Light-Gray Boxes */}
+              <div className="flex justify-between gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
                 {otpDigits.map((digit, index) => (
                   <input
                     key={index}
                     ref={(el) => (inputRefs.current[index] = el)}
                     type="text"
+                    inputMode="numeric"
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e.key)}
-                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-lg font-black text-slate-900 rounded border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all"
+                    className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-xl font-semibold rounded-xl transition-all outline-none ${
+                      digit 
+                        ? 'bg-white border-2 border-slate-900 text-slate-900 shadow-xs' 
+                        : 'bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white text-slate-900'
+                    }`}
                   />
                 ))}
               </div>
 
-              {/* Countdown & Resend */}
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              {/* Countdown & Resend Option */}
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
                 <span>
-                  Expires in: <strong className="text-slate-800">{formatMinutes(countdown)}</strong>
+                  Resend in <strong className="text-slate-800 font-mono">{formatMinutes(countdown)}</strong>
                 </span>
                 <button
                   type="button"
                   disabled={countdown > 0}
                   onClick={handleSendOtp}
-                  className="font-bold text-emerald-700 hover:text-emerald-800 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+                  className="font-semibold text-slate-900 hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
                 >
-                  Resend OTP on WhatsApp
+                  Resend OTP
                 </button>
               </div>
 
               <button
                 type="submit"
                 disabled={loading || otpDigits.join('').length < 6}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3 px-4 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98"
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
