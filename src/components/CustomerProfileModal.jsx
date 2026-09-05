@@ -157,9 +157,9 @@ export const CustomerProfileModal = () => {
         onClick={closeModal}
       />
 
-      {/* Slide-Over Side Panel (Matching Cart Drawer Structure) */}
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-[#F8F9FA] shadow-2xl flex flex-col animate-slide-left border-l border-slate-200 h-full overflow-hidden">
+      {/* Slide-Over Side Panel (100% Full Width on Mobile, Fixed Drawer on Desktop) */}
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
+        <div className="w-full sm:w-screen sm:max-w-md bg-[#F8F9FA] shadow-2xl flex flex-col animate-slide-left border-l border-slate-200 h-full overflow-hidden">
           
           {/* Panel Header */}
           <div className="p-4 sm:p-5 border-b border-slate-200/80 bg-white flex items-center justify-between flex-shrink-0">
