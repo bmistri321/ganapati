@@ -1,35 +1,37 @@
 /**
  * apiService.js
  * Unified API Service for WhatsApp OTP Auth, Live Products, COD Checkout & Invoices
- * XYVOT handles all WhatsApp dispatching securely - ZERO Meta tokens in frontend.
  */
-import { 
-  submitStoreApiSendOtp, 
-  submitStoreApiVerifyOtp, 
-  submitStoreApiOrder, 
-  STORE_API_KEY, 
-  supabase 
-} from './supabase.js';
+import { supabase } from './supabase';
 import { saveOrder, getSavedOrders } from './orderService';
 
-export { STORE_API_KEY };
+export const STORE_API_KEY = 'xyvot_pk_live_8d59e2_n4tuqdx7wivkrw';
 
-// 1. Ask XYVOT to send the OTP
-export const sendWhatsAppOtp = async (phone) => {
-  const res = await submitStoreApiSendOtp(STORE_API_KEY, { phone });
-  if (res.status !== 200) {
-    throw new Error(res.error || 'Failed to send OTP');
+// 1. Send OTP (Calls Supabase backend, NEVER calls Facebook)
+export const sendWhatsAppOtp = async (phoneNumber) => {
+  const { data, error } = await supabase.rpc('request_store_whatsapp_otp', {
+    p_api_key: STORE_API_KEY,
+    p_phone: phoneNumber
+  });
+
+  if (error || data?.status !== 200) {
+    throw new Error(error?.message || data?.error || 'Failed to send OTP');
   }
-  return res; // { success: true, message: "OTP sent" }
+  return data;
 };
 
-// 2. Ask XYVOT to verify the OTP
-export const verifyWhatsAppOtp = async (phone, otp) => {
-  const res = await submitStoreApiVerifyOtp(STORE_API_KEY, { phone, otp });
-  if (res.status !== 200) {
-    throw new Error(res.error || 'Invalid or expired OTP');
+// 2. Verify OTP
+export const verifyWhatsAppOtp = async (phoneNumber, enteredOtp) => {
+  const { data, error } = await supabase.rpc('verify_store_whatsapp_otp', {
+    p_api_key: STORE_API_KEY,
+    p_phone: phoneNumber,
+    p_otp: enteredOtp
+  });
+
+  if (error || data?.status !== 200) {
+    throw new Error(error?.message || data?.error || 'Invalid OTP code');
   }
-  return res; // { success: true, customer: {...}, session_token: "..." }
+  return data;
 };
 
 // Aliases for compatibility
