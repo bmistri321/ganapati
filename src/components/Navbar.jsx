@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShoppingBag, Search, Sparkles, MessageCircle, User, FileText, MapPin, LogOut, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Search, Sparkles, User, UserCheck, FileText, MapPin, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -28,7 +28,6 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
       {/* Top micro banner */}
       <div className="bg-slate-900 text-slate-200 text-[11px] sm:text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
         <span className="inline-flex items-center gap-1">
-          <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
           Direct WhatsApp Verification &bull; Cash on Delivery (COD)
         </span>
         <span className="hidden md:inline text-slate-600">|</span>
@@ -85,32 +84,27 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
             </div>
           </div>
 
-          {/* Actions: Auth & Cart */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Actions: User Profile Icon & Shopping Cart Icon */}
+          <div className="flex items-center gap-3 sm:gap-4">
             
-            {/* WhatsApp Login / Account Dropdown */}
+            {/* 1. Profile State: User (Logged Out) or UserCheck (Logged In) */}
             {customer ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-xs"
+                  title={`Logged in as ${customer.name || customer.fullName || 'Customer'}`}
+                  className="relative p-2 rounded-full hover:bg-slate-100 text-slate-900 transition-all flex items-center justify-center active:scale-95"
                 >
-                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-black">
-                    {customer.name?.charAt(0) || 'U'}
-                  </div>
-                  <span className="hidden sm:inline truncate max-w-[100px]">
-                    {customer.name?.split(' ')[0] || 'My Account'}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  <UserCheck className="w-6 h-6 stroke-[1.8] text-slate-900" />
                 </button>
 
                 {/* Dropdown Menu */}
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-1.5 w-52 bg-white rounded border border-slate-200 shadow-xl py-1 z-50 animate-fade-in divide-y divide-slate-100 text-xs">
-                    <div className="px-3 py-2 bg-slate-50">
-                      <p className="font-bold text-slate-900 truncate">{customer.name}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">+91 {customer.phone}</p>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded border border-slate-200 shadow-xl py-1.5 z-50 animate-fade-in divide-y divide-slate-100 text-xs">
+                    <div className="px-3.5 py-2.5 bg-slate-50">
+                      <p className="font-bold text-slate-900 truncate">{customer.name || customer.fullName || 'Verified Customer'}</p>
+                      <p className="text-[11px] text-slate-500 font-mono">+91 {customer.phone}</p>
                     </div>
 
                     <div className="py-1">
@@ -120,7 +114,7 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
                           setDropdownOpen(false);
                           setIsOrdersOpen(true);
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 font-medium text-slate-700"
+                        className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 font-medium text-slate-700 transition-colors"
                       >
                         <FileText className="w-4 h-4 text-emerald-600" />
                         <span>My Orders & Invoices</span>
@@ -132,7 +126,7 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
                           setDropdownOpen(false);
                           setIsProfileOpen(true);
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 font-medium text-slate-700"
+                        className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 font-medium text-slate-700 transition-colors"
                       >
                         <MapPin className="w-4 h-4 text-emerald-600" />
                         <span>GPS Delivery Address</span>
@@ -146,7 +140,7 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
                           setDropdownOpen(false);
                           logout();
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 font-medium text-rose-600"
+                        className="w-full text-left px-3.5 py-2 hover:bg-rose-50 flex items-center gap-2.5 font-medium text-rose-600 transition-colors"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>
@@ -159,28 +153,31 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
               <button
                 type="button"
                 onClick={() => setIsAuthOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold transition-all shadow-xs active:scale-95"
+                title="WhatsApp Quick Login"
+                className="relative p-2 rounded-full hover:bg-slate-100 text-slate-900 transition-all flex items-center justify-center active:scale-95"
               >
-                <MessageCircle className="w-4 h-4 text-emerald-600" />
-                <span className="hidden sm:inline">WhatsApp Login</span>
-                <span className="sm:hidden">Login</span>
+                <User className="w-6 h-6 stroke-[1.8] text-slate-900" />
               </button>
             )}
 
-            {/* Cart Drawer Trigger */}
+            {/* 2. Cart State: ShoppingCart (Empty) or ShoppingCart with Black Badge (Active) */}
             <button
+              type="button"
               onClick={() => setIsCartOpen(true)}
-              className={`relative flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-3 sm:px-3.5 py-2 rounded text-xs font-bold transition-all shadow-xs active:scale-95 ${
-                justAddedId ? 'ring-2 ring-emerald-500 scale-105' : ''
+              title={`Shopping Cart (${totalItemsCount} items)`}
+              className={`relative p-2 rounded-full hover:bg-slate-100 text-slate-900 transition-all flex items-center justify-center active:scale-95 ${
+                justAddedId ? 'scale-110' : ''
               }`}
             >
-              <ShoppingBag className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">Cart</span>
+              <ShoppingCart className="w-6 h-6 stroke-[1.8] text-slate-900" />
               
-              <span className="bg-emerald-600 text-white font-black text-[10px] px-1.5 py-0.2 rounded">
-                {totalItemsCount}
-              </span>
+              {totalItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center leading-none shadow-xs animate-scale-in">
+                  {totalItemsCount}
+                </span>
+              )}
             </button>
+
           </div>
 
         </div>
