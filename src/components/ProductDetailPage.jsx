@@ -42,11 +42,11 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
   const similarProducts = allProducts
     ? allProducts
         .filter((p) => p.id !== product.id && p.category && product.category && p.category.toLowerCase() === product.category.toLowerCase())
-        .slice(0, 4)
+        .slice(0, 5)
     : [];
 
   const fallbackProducts = similarProducts.length === 0 && allProducts
-    ? allProducts.filter((p) => p.id !== product.id).slice(0, 4)
+    ? allProducts.filter((p) => p.id !== product.id).slice(0, 5)
     : similarProducts;
 
   const handleAddToCart = () => {
@@ -367,32 +367,31 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
 
         </div>
 
-        {/* Similar Category Products Section */}
+        {/* Similar Category Products Section (Identical Home Page Density) */}
         {fallbackProducts.length > 0 && (
-          <div className="space-y-6 pt-6 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-emerald-600" />
-                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-                    Similar Products in {product.category}
-                  </h2>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Customers also explored these items
-                </p>
+          <div className="space-y-4 pt-6 border-t border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-600" />
+                <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700">
+                  Similar Products in {product.category || 'Store'}
+                </h2>
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  {fallbackProducts.length} items
+                </span>
               </div>
 
               <button
                 onClick={onBack}
-                className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer hidden sm:inline-block"
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded transition-all flex items-center gap-1 group cursor-pointer"
               >
-                View Full Catalog →
+                <span>View Full Catalog</span>
+                <span className="group-hover:translate-x-0.5 transition-transform">→</span>
               </button>
             </div>
 
-            {/* Similar Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+            {/* Products Grid (Identical High Density Sizing to Home Page) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
               {fallbackProducts.map((simProd) => (
                 <ProductCard
                   key={simProd.id}
