@@ -39,27 +39,14 @@ export const Navbar = ({ searchQuery, setSearchQuery, onHomeClick }) => {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-3">
           
-          {/* Logo & Tagline */}
+          {/* Store Brand Name Only */}
           <div 
             onClick={onHomeClick}
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group flex-shrink-0"
+            className="cursor-pointer group flex-shrink-0 py-1"
           >
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded bg-emerald-600 flex items-center justify-center text-white shadow-xs group-hover:bg-emerald-700 transition-colors">
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-black text-base sm:text-xl tracking-tight text-slate-900 group-hover:text-emerald-700 transition-colors">
-                  {settings.storeName}
-                </h1>
-                <span className="hidden sm:inline-block px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider">
-                  Live Stock
-                </span>
-              </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 hidden sm:block">
-                {settings.tagline}
-              </p>
-            </div>
+            <h1 className="font-black text-lg sm:text-2xl tracking-tight text-slate-900 group-hover:text-emerald-700 transition-colors">
+              Ganapati Store
+            </h1>
           </div>
 
           {/* Search Bar (Desktop) */}

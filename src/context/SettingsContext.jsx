@@ -5,8 +5,8 @@ const SettingsContext = createContext();
 import { fetchStoreInfoFromBackend } from '../services/supabaseStore';
 
 const DEFAULT_SETTINGS = {
-  storeName: 'Storefront',
-  tagline: 'Direct WhatsApp Ordering',
+  storeName: 'Ganapati Store',
+  tagline: '',
   whatsappNumber: '+91 9147364980',
   currency: '₹',
   storeAddress: 'Main Store Hub',
