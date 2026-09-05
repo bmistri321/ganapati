@@ -168,8 +168,11 @@ export const CartDrawer = () => {
                         {/* Stepper */}
                         <div className="flex items-center border border-slate-200 rounded-xl bg-white px-1.5 py-0.5">
                           <button
+                            type="button"
                             onClick={() => updateQuantity(item.id, item.quantity - 1, item.stock)}
-                            className="p-1 text-slate-600 hover:text-slate-900 cursor-pointer"
+                            disabled={item.quantity <= 1}
+                            className="p-1 text-slate-600 hover:text-slate-900 disabled:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                            title={item.quantity <= 1 ? "Use trash button to remove item" : "Decrease quantity"}
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
@@ -177,9 +180,10 @@ export const CartDrawer = () => {
                             {item.quantity}
                           </span>
                           <button
+                            type="button"
                             onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)}
                             disabled={isMax}
-                            className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                            className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
