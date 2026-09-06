@@ -28,8 +28,7 @@ import { useToast } from '../context/ToastContext';
 import { useSettings } from '../context/SettingsContext';
 import { LocationPicker } from './LocationPicker';
 import { upsertStoreCustomerProfile } from '../services/supabase';
-
-const SAVED_ADDRESSES_STORAGE_KEY = 'customer_saved_addresses';
+import { addressService } from '../services/addressService';
 
 export const CustomerProfileModal = () => {
   const { isProfileOpen, setIsProfileOpen, currentCustomer, customer, updateProfile, setIsOrdersOpen, logout } = useAuth();
@@ -45,26 +44,27 @@ export const CustomerProfileModal = () => {
   const [addressSubView, setAddressSubView] = useState('list');
   const [editingAddressId, setEditingAddressId] = useState(null);
 
-  // Address List State
+  // Address List State initialized from addressService
   const [savedAddresses, setSavedAddresses] = useState(() => {
-    try {
-      const saved = localStorage.getItem(SAVED_ADDRESSES_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
+    const list = addressService.getAddresses();
+    if (list.length > 0) return list;
 
-    return [
+    const fallback = [
       {
-        id: 'addr-default',
+        id: 'addr_default',
         tag: 'Home',
+        label: 'Home',
         name: activeCustomer?.fullName || activeCustomer?.name || 'Bishal Mistri',
+        recipientName: activeCustomer?.fullName || activeCustomer?.name || 'Bishal Mistri',
         phone: activeCustomer?.phone || '9876543210',
         address: activeCustomer?.address || activeCustomer?.shippingAddress?.street || 'Station Road, 4no Gali, Habra',
+        street: activeCustomer?.address || activeCustomer?.shippingAddress?.street || 'Station Road, 4no Gali, Habra',
         city: activeCustomer?.city || activeCustomer?.shippingAddress?.city || 'Habra / Ashoknagar',
         state: activeCustomer?.state || activeCustomer?.shippingAddress?.state || 'West Bengal',
         postalCode: activeCustomer?.postalCode || activeCustomer?.shippingAddress?.postalCode || '743263',
+        pincode: activeCustomer?.postalCode || activeCustomer?.shippingAddress?.postalCode || '743263',
+        lat: activeCustomer?.gpsLat || activeCustomer?.shippingAddress?.coordinates?.lat || 22.8291,
+        lng: activeCustomer?.gpsLng || activeCustomer?.shippingAddress?.coordinates?.lng || 88.6148,
         gpsCoords: {
           lat: activeCustomer?.gpsLat || activeCustomer?.shippingAddress?.coordinates?.lat || 22.8291,
           lng: activeCustomer?.gpsLng || activeCustomer?.shippingAddress?.coordinates?.lng || 88.6148
@@ -72,6 +72,8 @@ export const CustomerProfileModal = () => {
         isDefault: true
       }
     ];
+    localStorage.setItem('customer_saved_addresses', JSON.stringify(fallback));
+    return fallback;
   });
 
   // Active form state for Add/Edit
@@ -221,36 +223,33 @@ export const CustomerProfileModal = () => {
   };
 
   // Mark an address as Default
-  const handleSetDefaultAddress = (id) => {
-    const updated = savedAddresses.map((item) => ({
-      ...item,
-      isDefault: item.id === id
-    }));
+  const handleSetDefaultAddress = async (id) => {
+    const phone = activeCustomer?.phone || '';
+    const updated = await addressService.setDefaultAddress(phone, id);
     setSavedAddresses(updated);
-    localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(updated));
 
     const newDefault = updated.find((item) => item.id === id);
     if (newDefault) {
       syncDefaultAddressToProfile(newDefault);
-      showToast(`"${newDefault.tag || 'Address'}" marked as default delivery address!`, 'success');
+      showToast(`"${newDefault.tag || newDefault.label || 'Address'}" marked as default delivery address!`, 'success');
     }
   };
 
   // Delete an address
-  const handleDeleteAddress = (id, e) => {
+  const handleDeleteAddress = async (id, e) => {
     e?.stopPropagation();
     if (savedAddresses.length <= 1) {
       showToast('You must keep at least one saved delivery address', 'warning');
       return;
     }
+    const phone = activeCustomer?.phone || '';
     const toDelete = savedAddresses.find(a => a.id === id);
-    const remaining = savedAddresses.filter(a => a.id !== id);
-    if (toDelete?.isDefault && remaining.length > 0) {
-      remaining[0].isDefault = true;
-      syncDefaultAddressToProfile(remaining[0]);
+    const updated = await addressService.deleteAddress(phone, id);
+    if (toDelete?.isDefault && updated.length > 0) {
+      const newDef = updated.find(a => a.isDefault) || updated[0];
+      syncDefaultAddressToProfile(newDef);
     }
-    setSavedAddresses(remaining);
-    localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(remaining));
+    setSavedAddresses(updated);
     showToast('Address removed from address book', 'info');
   };
 
@@ -266,45 +265,28 @@ export const CustomerProfileModal = () => {
       return;
     }
 
+    const phone = activeCustomer?.phone || '';
     const addressPayload = {
-      id: editingAddressId || `addr-${Date.now()}`,
+      id: editingAddressId || undefined,
+      label: formTag || 'Home',
       tag: formTag || 'Home',
+      recipientName: formName.trim(),
       name: formName.trim(),
-      phone: formPhone.trim() || activeCustomer?.phone || '',
+      phone: formPhone.trim() || phone,
+      street: formAddress.trim(),
       address: formAddress.trim(),
       city: formCity.trim() || 'Habra / Ashoknagar',
       state: formState.trim() || 'West Bengal',
+      pincode: formPostalCode.trim() || '743263',
       postalCode: formPostalCode.trim() || '743263',
+      lat: formGpsCoords.lat,
+      lng: formGpsCoords.lng,
       gpsCoords: formGpsCoords,
       isDefault: savedAddresses.length === 0 ? true : formIsDefault
     };
 
-    let updatedList = [];
-    if (editingAddressId) {
-      updatedList = savedAddresses.map((item) => {
-        if (item.id === editingAddressId) {
-          return addressPayload;
-        }
-        return addressPayload.isDefault ? { ...item, isDefault: false } : item;
-      });
-    } else {
-      if (addressPayload.isDefault) {
-        updatedList = [
-          addressPayload,
-          ...savedAddresses.map((item) => ({ ...item, isDefault: false }))
-        ];
-      } else {
-        updatedList = [...savedAddresses, addressPayload];
-      }
-    }
-
-    // Ensure at least one is default
-    if (!updatedList.some(a => a.isDefault) && updatedList.length > 0) {
-      updatedList[0].isDefault = true;
-    }
-
+    const updatedList = await addressService.saveAddress(phone, addressPayload);
     setSavedAddresses(updatedList);
-    localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(updatedList));
 
     if (addressPayload.isDefault) {
       await syncDefaultAddressToProfile(addressPayload);
