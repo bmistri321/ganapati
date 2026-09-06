@@ -264,11 +264,11 @@ export const WhatsAppLoginModal = () => {
           </div>
 
           {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-7 flex flex-col justify-center">
 
         {step === 'phone' && (
           /* Step 1: Mobile Phone Number Input */
-          <div className="w-full space-y-6 text-left">
+          <div className="w-full space-y-6 text-left my-auto">
             <div className="space-y-1.5">
               <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                 Welcome to Ganapati Store
@@ -320,7 +320,7 @@ export const WhatsAppLoginModal = () => {
 
         {step === 'otp' && (
           /* Step 2: 6-Digit OTP Verification */
-          <div className="w-full space-y-6 text-left">
+          <div className="w-full space-y-6 text-left my-auto">
             <div className="space-y-1.5">
               <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                 Enter WhatsApp OTP
@@ -387,7 +387,7 @@ export const WhatsAppLoginModal = () => {
 
         {step === 'onboarding' && (
           /* Step 3: First-Time User Profile & Address Setup */
-          <div className="space-y-5 pb-6">
+          <div className="space-y-5 my-auto pb-4">
             <form onSubmit={handleSaveOnboarding} className="space-y-4">
               {/* Full Name */}
               <div>
