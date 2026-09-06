@@ -45,9 +45,9 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   // Contact State (Initialized from active session)
   const [customerInfo, setCustomerInfo] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('customer_session') || '{}');
+      const saved = JSON.parse(localStorage.getItem('customer_session') || localStorage.getItem('quickcart_customer_session') || '{}');
       return {
-        name: saved.fullName || saved.name || '',
+        name: saved.fullName || saved.name || saved.full_name || saved.customer_name || '',
         phone: saved.phone || '',
         email: saved.email || ''
       };
@@ -59,7 +59,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   // Shipping Address State
   const [shippingAddress, setShippingAddress] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('customer_session') || '{}');
+      const saved = JSON.parse(localStorage.getItem('customer_session') || localStorage.getItem('quickcart_customer_session') || '{}');
       return {
         street: saved.address || saved.shippingAddress?.street || '',
         city: saved.city || saved.shippingAddress?.city || 'Habra',
@@ -92,12 +92,12 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
     let cust = activeCustomer;
     if (!cust) {
       try {
-        cust = JSON.parse(localStorage.getItem('customer_session') || '{}');
+        cust = JSON.parse(localStorage.getItem('customer_session') || localStorage.getItem('quickcart_customer_session') || '{}');
       } catch (e) {}
     }
 
-    if (cust && (cust.fullName || cust.name || cust.phone)) {
-      const custName = cust.fullName || cust.name || '';
+    if (cust && (cust.fullName || cust.name || cust.full_name || cust.customer_name || cust.phone)) {
+      const custName = cust.fullName || cust.name || cust.full_name || cust.customer_name || '';
       const custPhone = cust.phone || '';
       const custEmail = cust.email || '';
       const custStreet = cust.address || cust.shippingAddress?.street || '';
