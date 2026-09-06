@@ -42,62 +42,93 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   // Whether user is in "Edit Address" mode or "Saved Address" card mode
   const [isEditingAddress, setIsEditingAddress] = useState(false);
 
-  // Contact State
-  const [customerInfo, setCustomerInfo] = useState({
-    name: '',
-    phone: '',
-    email: '',
+  // Contact State (Initialized from active session)
+  const [customerInfo, setCustomerInfo] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('customer_session') || '{}');
+      return {
+        name: saved.fullName || saved.name || '',
+        phone: saved.phone || '',
+        email: saved.email || ''
+      };
+    } catch (e) {
+      return { name: '', phone: '', email: '' };
+    }
   });
 
   // Shipping Address State
-  const [shippingAddress, setShippingAddress] = useState({
-    street: '',
-    city: 'Habra',
-    state: 'West Bengal',
-    postalCode: '743263',
-    notes: '',
-    coordinates: { lat: 22.8291, lng: 88.6148 }
+  const [shippingAddress, setShippingAddress] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('customer_session') || '{}');
+      return {
+        street: saved.address || saved.shippingAddress?.street || '',
+        city: saved.city || saved.shippingAddress?.city || 'Habra',
+        state: saved.state || saved.shippingAddress?.state || 'West Bengal',
+        postalCode: saved.postalCode || saved.shippingAddress?.postalCode || '743263',
+        notes: saved.notes || '',
+        coordinates: {
+          lat: saved.gpsLat || saved.shippingAddress?.coordinates?.lat || 22.8291,
+          lng: saved.gpsLng || saved.shippingAddress?.coordinates?.lng || 88.6148
+        }
+      };
+    } catch (e) {
+      return {
+        street: '',
+        city: 'Habra',
+        state: 'West Bengal',
+        postalCode: '743263',
+        notes: '',
+        coordinates: { lat: 22.8291, lng: 88.6148 }
+      };
+    }
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditingPickupPerson, setIsEditingPickupPerson] = useState(false);
 
   // Sync with customer auth profile
   useEffect(() => {
-    if (activeCustomer) {
-      const custName = activeCustomer.fullName || activeCustomer.name || '';
-      const custPhone = activeCustomer.phone || '';
-      const custEmail = activeCustomer.email || '';
-      const custStreet = activeCustomer.address || activeCustomer.shippingAddress?.street || '';
-      const custCity = activeCustomer.city || activeCustomer.shippingAddress?.city || 'Habra';
-      const custState = activeCustomer.state || activeCustomer.shippingAddress?.state || 'West Bengal';
-      const custPincode = activeCustomer.postalCode || activeCustomer.shippingAddress?.postalCode || '743263';
-      const custLat = activeCustomer.gpsLat || activeCustomer.shippingAddress?.coordinates?.lat || 22.8291;
-      const custLng = activeCustomer.gpsLng || activeCustomer.shippingAddress?.coordinates?.lng || 88.6148;
+    let cust = activeCustomer;
+    if (!cust) {
+      try {
+        cust = JSON.parse(localStorage.getItem('customer_session') || '{}');
+      } catch (e) {}
+    }
 
-      setCustomerInfo({
-        name: custName !== 'Verified Customer' ? custName : '',
-        phone: custPhone,
-        email: custEmail
-      });
+    if (cust && (cust.fullName || cust.name || cust.phone)) {
+      const custName = cust.fullName || cust.name || '';
+      const custPhone = cust.phone || '';
+      const custEmail = cust.email || '';
+      const custStreet = cust.address || cust.shippingAddress?.street || '';
+      const custCity = cust.city || cust.shippingAddress?.city || 'Habra';
+      const custState = cust.state || cust.shippingAddress?.state || 'West Bengal';
+      const custPincode = cust.postalCode || cust.shippingAddress?.postalCode || '743263';
+      const custLat = cust.gpsLat || cust.shippingAddress?.coordinates?.lat || 22.8291;
+      const custLng = cust.gpsLng || cust.shippingAddress?.coordinates?.lng || 88.6148;
 
-      setShippingAddress({
-        street: custStreet,
-        city: custCity,
-        state: custState,
-        postalCode: custPincode,
-        notes: activeCustomer.notes || '',
-        coordinates: { lat: custLat, lng: custLng }
-      });
+      setCustomerInfo((prev) => ({
+        name: custName || prev.name || '',
+        phone: custPhone || prev.phone || '',
+        email: custEmail || prev.email || ''
+      }));
+
+      setShippingAddress((prev) => ({
+        street: custStreet || prev.street || '',
+        city: custCity || prev.city || 'Habra',
+        state: custState || prev.state || 'West Bengal',
+        postalCode: custPincode || prev.postalCode || '743263',
+        notes: cust.notes || prev.notes || '',
+        coordinates: {
+          lat: custLat || prev.coordinates.lat || 22.8291,
+          lng: custLng || prev.coordinates.lng || 88.6148
+        }
+      }));
 
       // If user has saved name and address, default to clean saved-address view
       if (custName && custStreet) {
         setIsEditingAddress(false);
-      } else {
-        setIsEditingAddress(true);
       }
-    } else {
-      setIsEditingAddress(true);
     }
   }, [activeCustomer, isCheckoutOpen]);
 
@@ -589,38 +620,80 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
                 {/* Pickup Customer Contact Info */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">1</span>
-                    Pickup Person Details
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">1</span>
+                      Pickup Person Details
+                    </h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Full Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Bishal Mistri"
-                        value={customerInfo.name}
-                        onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                        className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        WhatsApp Number <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="98765 43210"
-                        value={customerInfo.phone}
-                        onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') })}
-                        className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
-                      />
-                    </div>
+                    {customerInfo.name && !isEditingPickupPerson && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPickupPerson(true)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Change Person</span>
+                      </button>
+                    )}
                   </div>
+
+                  {customerInfo.name && !isEditingPickupPerson ? (
+                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/90 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 text-sm">{customerInfo.name}</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span>Profile Contact</span>
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 font-medium">+91 {customerInfo.phone}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {customerInfo.name && (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingPickupPerson(false)}
+                            className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Full Name <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Bishal Mistri"
+                            value={customerInfo.name}
+                            onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                            className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            WhatsApp Number <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="98765 43210"
+                            value={customerInfo.phone}
+                            onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') })}
+                            className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
