@@ -31,17 +31,29 @@ import { upsertStoreCustomerProfile } from '../services/supabase';
 import { addressService } from '../services/addressService';
 
 export const CustomerProfileModal = () => {
-  const { isProfileOpen, setIsProfileOpen, currentCustomer, customer, updateProfile, setIsOrdersOpen, logout } = useAuth();
+  const { 
+    isProfileOpen, 
+    setIsProfileOpen, 
+    currentCustomer, 
+    customer, 
+    updateProfile, 
+    setIsOrdersOpen, 
+    logout,
+    profileInitialTab,
+    setProfileInitialTab,
+    profileInitialSubView,
+    setProfileInitialSubView
+  } = useAuth();
   const { showToast } = useToast();
   const { settings } = useSettings();
 
   const activeCustomer = currentCustomer || customer;
 
   // View state: 'hub' (iOS grouped card menu) | 'address' (Address Book) | 'privacy' | 'terms' | 'help'
-  const [activeTab, setActiveTab] = useState('hub');
+  const [activeTab, setActiveTab] = useState(profileInitialTab || 'hub');
 
   // Address subview state: 'list' (Saved addresses cards) | 'add' (Add new address) | 'edit' (Edit address)
-  const [addressSubView, setAddressSubView] = useState('list');
+  const [addressSubView, setAddressSubView] = useState(profileInitialSubView || 'list');
   const [editingAddressId, setEditingAddressId] = useState(null);
 
   // Address List State initialized from addressService
@@ -89,6 +101,16 @@ export const CustomerProfileModal = () => {
   const [formIsDefault, setFormIsDefault] = useState(true);
   const [isLocating, setIsLocating] = useState(false);
 
+  // Synchronize when modal opens or tab props change
+  useEffect(() => {
+    if (isProfileOpen) {
+      if (profileInitialTab) setActiveTab(profileInitialTab);
+      if (profileInitialSubView) setAddressSubView(profileInitialSubView);
+      const latest = addressService.getAddresses();
+      if (latest.length > 0) setSavedAddresses(latest);
+    }
+  }, [isProfileOpen, profileInitialTab, profileInitialSubView]);
+
   // Synchronize initial default address if customer updates
   useEffect(() => {
     if (activeCustomer && savedAddresses.length > 0) {
@@ -97,7 +119,7 @@ export const CustomerProfileModal = () => {
         const updated = [...savedAddresses];
         updated[0].isDefault = true;
         setSavedAddresses(updated);
-        localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem('customer_saved_addresses', JSON.stringify(updated));
       }
     }
   }, [activeCustomer]);
@@ -126,6 +148,8 @@ export const CustomerProfileModal = () => {
     setActiveTab('hub');
     setAddressSubView('list');
     setEditingAddressId(null);
+    if (setProfileInitialTab) setProfileInitialTab('hub');
+    if (setProfileInitialSubView) setProfileInitialSubView('list');
   };
 
   // Sync default address with Profile & Supabase

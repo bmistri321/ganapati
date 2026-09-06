@@ -111,6 +111,9 @@ export const addressService = {
 
     // Update LocalStorage instantly
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('address_changed', { detail: updatedList }));
+    }
 
     // Background sync to Supabase if customer phone is available
     if (phone) {
@@ -139,6 +142,9 @@ export const addressService = {
     }));
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('address_changed', { detail: updatedList }));
+    }
 
     if (phone) {
       const cleanPhone = phone.toString().replace(/\D/g, '').slice(-10);
@@ -168,6 +174,9 @@ export const addressService = {
     let updatedList = list.filter((item) => item.id !== addressId);
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('address_changed', { detail: updatedList }));
+    }
 
     if (phone) {
       const cleanPhone = phone.toString().replace(/\D/g, '').slice(-10);

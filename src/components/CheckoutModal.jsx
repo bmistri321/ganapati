@@ -11,21 +11,22 @@ import {
   MessageCircle, 
   AlertCircle, 
   ArrowLeft, 
-  ArrowRight,
+  ArrowRight, 
   ShieldCheck, 
   Clock, 
   Sparkles,
   Edit3,
   Check,
   Building2,
-  CalendarCheck
+  CalendarCheck,
+  Plus
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { LocationPicker } from './LocationPicker';
+import { addressService } from '../services/addressService';
 import { formatWhatsAppMessage, buildWhatsAppUrl } from '../services/orderService';
 import { submitStoreApiOrder, STORE_API_KEY, upsertStoreCustomerProfile } from '../services/supabase';
 
@@ -33,18 +34,23 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   const { isCheckoutOpen, setIsCheckoutOpen, cartItems, subtotal, clearCart } = useCart();
   const { settings } = useSettings();
   const { showToast } = useToast();
-  const { currentCustomer, customer, setIsAuthOpen } = useAuth();
+  const { currentCustomer, customer, setIsAuthOpen, openAddressBook, isProfileOpen } = useAuth();
 
   const activeCustomer = currentCustomer || customer;
 
   // Delivery Method: 'shipping' (Home Delivery) | 'pickup' (Store Pickup)
   const [deliveryMethod, setDeliveryMethod] = useState('shipping');
 
-  // Whether user is in "Edit Address" mode or "Saved Address" card mode
-  const [isEditingAddress, setIsEditingAddress] = useState(false);
-
-  // Contact State (Initialized from active session)
+  // Contact State (Initialized from default address or active session)
   const [customerInfo, setCustomerInfo] = useState(() => {
+    const defaultAddr = addressService.getDefaultAddress();
+    if (defaultAddr) {
+      return {
+        name: defaultAddr.name || defaultAddr.recipientName || '',
+        phone: defaultAddr.phone || '',
+        email: ''
+      };
+    }
     try {
       const saved = JSON.parse(localStorage.getItem('customer_session') || localStorage.getItem('quickcart_customer_session') || '{}');
       return {
@@ -59,9 +65,25 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
   // Shipping Address State
   const [shippingAddress, setShippingAddress] = useState(() => {
+    const defaultAddr = addressService.getDefaultAddress();
+    if (defaultAddr) {
+      return {
+        tag: defaultAddr.tag || defaultAddr.label || 'Home',
+        street: defaultAddr.address || defaultAddr.street || '',
+        city: defaultAddr.city || 'Habra / Ashoknagar',
+        state: defaultAddr.state || 'West Bengal',
+        postalCode: defaultAddr.postalCode || defaultAddr.pincode || '743263',
+        notes: '',
+        coordinates: {
+          lat: defaultAddr.gpsCoords?.lat ?? defaultAddr.lat ?? 22.8291,
+          lng: defaultAddr.gpsCoords?.lng ?? defaultAddr.lng ?? 88.6148
+        }
+      };
+    }
     try {
       const saved = JSON.parse(localStorage.getItem('customer_session') || localStorage.getItem('quickcart_customer_session') || '{}');
       return {
+        tag: 'Home',
         street: saved.address || saved.shippingAddress?.street || '',
         city: saved.city || saved.shippingAddress?.city || 'Habra',
         state: saved.state || saved.shippingAddress?.state || 'West Bengal',
@@ -74,6 +96,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
       };
     } catch (e) {
       return {
+        tag: 'Home',
         street: '',
         city: 'Habra',
         state: 'West Bengal',
@@ -88,8 +111,9 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditingPickupPerson, setIsEditingPickupPerson] = useState(false);
 
-  // Sync with customer auth profile
-  useEffect(() => {
+  // Sync shipping address & customer contact from default address / session
+  const syncShippingDetails = () => {
+    const defaultAddr = addressService.getDefaultAddress();
     let cust = activeCustomer;
     if (!cust) {
       try {
@@ -97,41 +121,71 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
       } catch (e) {}
     }
 
-    if (cust && (cust.fullName || cust.name || cust.full_name || cust.customer_name || cust.phone)) {
+    if (defaultAddr) {
+      setCustomerInfo((prev) => ({
+        name: defaultAddr.name || defaultAddr.recipientName || cust?.fullName || cust?.name || prev.name || '',
+        phone: defaultAddr.phone || cust?.phone || prev.phone || '',
+        email: cust?.email || prev.email || ''
+      }));
+
+      setShippingAddress({
+        tag: defaultAddr.tag || defaultAddr.label || 'Home',
+        street: defaultAddr.address || defaultAddr.street || '',
+        city: defaultAddr.city || 'Habra / Ashoknagar',
+        state: defaultAddr.state || 'West Bengal',
+        postalCode: defaultAddr.postalCode || defaultAddr.pincode || '743263',
+        notes: '',
+        coordinates: {
+          lat: defaultAddr.gpsCoords?.lat ?? defaultAddr.lat ?? 22.8291,
+          lng: defaultAddr.gpsCoords?.lng ?? defaultAddr.lng ?? 88.6148
+        }
+      });
+    } else if (cust && (cust.fullName || cust.name || cust.phone || cust.address)) {
       const custName = cust.fullName || cust.name || cust.full_name || cust.customer_name || '';
       const custPhone = cust.phone || '';
       const custEmail = cust.email || '';
       const custStreet = cust.address || cust.shippingAddress?.street || '';
-      const custCity = cust.city || cust.shippingAddress?.city || 'Habra';
+      const custCity = cust.city || cust.shippingAddress?.city || 'Habra / Ashoknagar';
       const custState = cust.state || cust.shippingAddress?.state || 'West Bengal';
       const custPincode = cust.postalCode || cust.shippingAddress?.postalCode || '743263';
       const custLat = cust.gpsLat || cust.shippingAddress?.coordinates?.lat || 22.8291;
       const custLng = cust.gpsLng || cust.shippingAddress?.coordinates?.lng || 88.6148;
 
-      setCustomerInfo((prev) => ({
-        name: custName || prev.name || '',
-        phone: custPhone || prev.phone || '',
-        email: custEmail || prev.email || ''
-      }));
+      setCustomerInfo({
+        name: custName,
+        phone: custPhone,
+        email: custEmail
+      });
 
-      setShippingAddress((prev) => ({
-        street: custStreet || prev.street || '',
-        city: custCity || prev.city || 'Habra',
-        state: custState || prev.state || 'West Bengal',
-        postalCode: custPincode || prev.postalCode || '743263',
-        notes: cust.notes || prev.notes || '',
+      setShippingAddress({
+        tag: 'Home',
+        street: custStreet,
+        city: custCity,
+        state: custState,
+        postalCode: custPincode,
+        notes: cust.notes || '',
         coordinates: {
-          lat: custLat || prev.coordinates.lat || 22.8291,
-          lng: custLng || prev.coordinates.lng || 88.6148
+          lat: custLat,
+          lng: custLng
         }
-      }));
-
-      // If user has saved name and address, default to clean saved-address view
-      if (custName && custStreet) {
-        setIsEditingAddress(false);
-      }
+      });
     }
-  }, [activeCustomer, isCheckoutOpen]);
+  };
+
+  useEffect(() => {
+    syncShippingDetails();
+
+    const handleAddressChange = () => {
+      syncShippingDetails();
+    };
+
+    window.addEventListener('address_changed', handleAddressChange);
+    window.addEventListener('storage', handleAddressChange);
+    return () => {
+      window.removeEventListener('address_changed', handleAddressChange);
+      window.removeEventListener('storage', handleAddressChange);
+    };
+  }, [activeCustomer, isCheckoutOpen, isProfileOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -150,26 +204,25 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
   const grandTotal = subtotal + deliveryFee;
 
-  const hasSavedProfile = Boolean(
-    activeCustomer && 
-    customerInfo.name.trim() && 
-    customerInfo.phone.trim() && 
-    shippingAddress.street.trim()
-  );
-
   const validate = () => {
     const errs = {};
-    if (!customerInfo.name.trim()) errs.name = 'Full name is required';
-    if (!customerInfo.phone.trim()) {
-      errs.phone = 'WhatsApp phone number is required';
-    } else if (customerInfo.phone.trim().length < 10) {
-      errs.phone = 'Please enter a valid 10-digit mobile number';
-    }
-
     if (deliveryMethod === 'shipping') {
-      if (!shippingAddress.street.trim()) errs.street = 'Street address / Flat is required';
-      if (!shippingAddress.city.trim()) errs.city = 'City is required';
-      if (!shippingAddress.postalCode.trim()) errs.postalCode = 'Pincode is required';
+      if (!shippingAddress.street.trim()) {
+        showToast('Please add a delivery address to place your order', 'warning');
+        openAddressBook('address', 'add');
+        return false;
+      }
+      if (!customerInfo.name.trim()) errs.name = 'Recipient name is required';
+      if (!customerInfo.phone.trim()) {
+        errs.phone = 'Contact number is required';
+      }
+    } else {
+      if (!customerInfo.name.trim()) errs.name = 'Full name is required';
+      if (!customerInfo.phone.trim()) {
+        errs.phone = 'WhatsApp phone number is required';
+      } else if (customerInfo.phone.trim().length < 10) {
+        errs.phone = 'Please enter a valid 10-digit mobile number';
+      }
     }
 
     setErrors(errs);
@@ -349,29 +402,35 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                   </div>
                 </div>
 
-                {/* Saved Profile Card */}
-                {hasSavedProfile && !isEditingAddress ? (
+                {/* Saved Delivery Address Card */}
+                {shippingAddress.street ? (
                   <div className="p-4 rounded-2xl bg-[#F4F5F7] space-y-2.5 relative">
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-800 shadow-xs">
-                        <Check className="w-3 h-3 text-slate-800 stroke-[3]" />
-                        <span>Saved Delivery Address</span>
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-800 shadow-xs">
+                          <Check className="w-3 h-3 text-slate-800 stroke-[3]" />
+                          <span>Delivery Address</span>
+                        </span>
+                        {shippingAddress.tag && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 text-slate-700">
+                            {shippingAddress.tag}
+                          </span>
+                        )}
+                      </div>
 
                       <button
                         type="button"
-                        onClick={() => setIsEditingAddress(true)}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-800 shadow-xs transition-colors cursor-pointer active:scale-95"
+                        onClick={() => openAddressBook('address', 'list')}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-white hover:bg-slate-100 text-slate-900 shadow-xs transition-all cursor-pointer active:scale-95"
                       >
-                        <Edit3 className="w-3 h-3 text-slate-600" />
-                        <span>Edit</span>
+                        <span>Change</span>
                       </button>
                     </div>
 
                     <div className="space-y-1 text-xs pt-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 text-sm">{customerInfo.name}</span>
-                        <span className="font-semibold text-slate-600">+91 {customerInfo.phone}</span>
+                        <span className="font-bold text-slate-900 text-sm">{customerInfo.name || 'Recipient'}</span>
+                        <span className="font-semibold text-slate-600 font-mono">{customerInfo.phone ? `+91 ${customerInfo.phone.replace(/\D/g, '').slice(-10)}` : ''}</span>
                       </div>
                       <p className="text-slate-600 leading-relaxed font-medium">
                         {shippingAddress.street}
@@ -385,183 +444,22 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                     </div>
                   </div>
                 ) : (
-                  /* Editable Contact & Address Form */
-                  <div className="space-y-4">
-                    {hasSavedProfile && (
-                      <div className="flex items-center justify-between pb-1">
-                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                          Edit Delivery Address
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingAddress(false)}
-                          className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Contact Information */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                          <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">1</span>
-                          Contact Information
-                        </h3>
-                        {!activeCustomer && (
-                          <button
-                            type="button"
-                            onClick={() => setIsAuthOpen(true)}
-                            className="text-[11px] font-bold text-slate-900 hover:underline cursor-pointer"
-                          >
-                            Login with WhatsApp
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            Full Name <span className="text-rose-500">*</span>
-                          </label>
-                          <div className="relative">
-                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input
-                              type="text"
-                              placeholder="e.g. Bishal Mistri"
-                              value={customerInfo.name}
-                              onChange={(e) => {
-                                setCustomerInfo({ ...customerInfo, name: e.target.value });
-                                if (errors.name) setErrors({ ...errors, name: null });
-                              }}
-                              className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 outline-none transition-all ${
-                                errors.name ? 'ring-1 ring-rose-400 bg-rose-50/40' : 'focus:bg-white focus:ring-1 focus:ring-slate-400'
-                              }`}
-                            />
-                          </div>
-                          {errors.name && <span className="text-[10px] text-rose-500 font-medium">{errors.name}</span>}
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            WhatsApp Number <span className="text-rose-500">*</span>
-                          </label>
-                          <div className="relative">
-                            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input
-                              type="tel"
-                              placeholder="98765 43210"
-                              value={customerInfo.phone}
-                              onChange={(e) => {
-                                setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') });
-                                if (errors.phone) setErrors({ ...errors, phone: null });
-                              }}
-                              className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 outline-none transition-all ${
-                                errors.phone ? 'ring-1 ring-rose-400 bg-rose-50/40' : 'focus:bg-white focus:ring-1 focus:ring-slate-400'
-                              }`}
-                            />
-                          </div>
-                          {errors.phone && <span className="text-[10px] text-rose-500 font-medium">{errors.phone}</span>}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Email Address
-                        </label>
-                        <div className="relative">
-                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                          <input
-                            type="email"
-                            placeholder="e.g. bishal@example.com"
-                            value={customerInfo.email}
-                            onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                            className="w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
-                          />
-                        </div>
-                      </div>
+                  <div className="p-5 rounded-2xl bg-[#F4F5F7] text-center space-y-2.5">
+                    <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center mx-auto">
+                      <MapPin className="w-5 h-5" />
                     </div>
-
-                    {/* Delivery Address & GPS */}
-                    <div className="space-y-3 pt-2">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">2</span>
-                        Delivery Address & GPS Map Pin
-                      </h3>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Street Address / House / Flat <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Flat 402, Green Valley Apartments, Station Road"
-                          value={shippingAddress.street}
-                          onChange={(e) => {
-                            setShippingAddress({ ...shippingAddress, street: e.target.value });
-                            if (errors.street) setErrors({ ...errors, street: null });
-                          }}
-                          className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 outline-none transition-all ${
-                            errors.street ? 'ring-1 ring-rose-400 bg-rose-50/40' : 'focus:bg-white focus:ring-1 focus:ring-slate-400'
-                          }`}
-                        />
-                        {errors.street && <span className="text-[10px] text-rose-500 font-medium">{errors.street}</span>}
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2.5">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            City <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Habra"
-                            value={shippingAddress.city}
-                            onChange={(e) => {
-                              setShippingAddress({ ...shippingAddress, city: e.target.value });
-                              if (errors.city) setErrors({ ...errors, city: null });
-                            }}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
-                          <input
-                            type="text"
-                            placeholder="West Bengal"
-                            value={shippingAddress.state}
-                            onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            Pincode <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="743263"
-                            value={shippingAddress.postalCode}
-                            onChange={(e) => {
-                              setShippingAddress({ ...shippingAddress, postalCode: e.target.value.replace(/\D/g, '') });
-                              if (errors.postalCode) setErrors({ ...errors, postalCode: null });
-                            }}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      {/* GPS Pinpoint Map */}
-                      <div>
-                        <LocationPicker
-                          coordinates={shippingAddress.coordinates}
-                          onChange={(coords) => setShippingAddress({ ...shippingAddress, coordinates: coords })}
-                        />
-                      </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">No delivery address saved</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Please add a delivery address to continue checkout</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => openAddressBook('address', 'add')}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Delivery Address</span>
+                    </button>
                   </div>
                 )}
               </>

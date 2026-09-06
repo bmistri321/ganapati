@@ -23,7 +23,15 @@ export const AuthProvider = ({ children }) => {
   });
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileInitialTab, setProfileInitialTab] = useState('hub');
+  const [profileInitialSubView, setProfileInitialSubView] = useState('list');
+
+  const openAddressBook = (tab = 'address', subView = 'list') => {
+    setProfileInitialTab(tab);
+    setProfileInitialSubView(subView);
+    setIsProfileOpen(true);
+  };
 
   // OTP Verification State
   const [otpState, setOtpState] = useState({
@@ -141,6 +149,11 @@ export const AuthProvider = ({ children }) => {
         setIsOrdersOpen,
         isProfileOpen,
         setIsProfileOpen,
+        profileInitialTab,
+        setProfileInitialTab,
+        profileInitialSubView,
+        setProfileInitialSubView,
+        openAddressBook,
         otpState,
         sendWhatsAppOtp,
         verifyWhatsAppOtp,
