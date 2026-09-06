@@ -281,10 +281,10 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
       {/* Slide-over Right Side Panel Drawer */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
-        <div className="w-full sm:w-screen sm:max-w-md bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full">
+        <div className="w-full sm:w-screen sm:max-w-md bg-white shadow-2xl flex flex-col animate-slide-left h-full overflow-hidden">
           
           {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between bg-white sticky top-0 z-20">
+          <div className="p-4 sm:p-5 flex items-center justify-between bg-white sticky top-0 z-20">
             <div>
               <h2 className="text-base font-bold text-slate-900 tracking-tight">
                 Checkout & Dispatch
@@ -302,13 +302,15 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             </button>
           </div>
 
-          {/* Delivery Method Switcher Tabs */}
-          <div className="px-4 sm:px-6 pt-4 pb-2 bg-white border-b border-slate-200/70">
-            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-bold border border-slate-200/60">
+          {/* Scrollable Form Content */}
+          <div className="px-4 sm:px-5 pb-6 overflow-y-auto space-y-4 flex-1">
+            
+            {/* Delivery Method Switcher */}
+            <div className="p-1 bg-[#F4F5F7] rounded-2xl grid grid-cols-2 text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setDeliveryMethod('shipping')}
-                className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   deliveryMethod === 'shipping'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -321,7 +323,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
               <button
                 type="button"
                 onClick={() => setDeliveryMethod('pickup')}
-                className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   deliveryMethod === 'pickup'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -331,16 +333,12 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                 <span>Store Pickup</span>
               </button>
             </div>
-          </div>
 
-          {/* Scrollable Form Content */}
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
-            
             {/* OPTION A: HOME DELIVERY */}
             {deliveryMethod === 'shipping' && (
               <>
                 {/* Same-Day Delivery Guarantee Banner */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                     <CalendarCheck className="w-4 h-4" />
                   </div>
@@ -354,32 +352,31 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                   </div>
                 </div>
 
-                {/* 1-Click Saved Profile Card (if available and not currently editing) */}
+                {/* Saved Profile Card */}
                 {hasSavedProfile && !isEditingAddress ? (
-                  <div className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-3 relative">
+                  <div className="p-4 rounded-2xl bg-[#F4F5F7] space-y-2.5 relative">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200/60">
-                          <Check className="w-3 h-3 text-slate-800 stroke-[3]" />
-                          <span>Saved Delivery Address</span>
-                        </span>
-                      </div>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-800 shadow-xs">
+                        <Check className="w-3 h-3 text-slate-800 stroke-[3]" />
+                        <span>Saved Delivery Address</span>
+                      </span>
+
                       <button
                         type="button"
                         onClick={() => setIsEditingAddress(true)}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/60 transition-colors cursor-pointer active:scale-95"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-800 shadow-xs transition-colors cursor-pointer active:scale-95"
                       >
                         <Edit3 className="w-3 h-3 text-slate-600" />
                         <span>Edit</span>
                       </button>
                     </div>
 
-                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/70 space-y-1 text-xs">
+                    <div className="space-y-1 text-xs pt-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-900 text-sm">{customerInfo.name}</span>
                         <span className="font-semibold text-slate-600">+91 {customerInfo.phone}</span>
                       </div>
-                      <p className="text-slate-600 leading-relaxed pt-1 font-medium">
+                      <p className="text-slate-600 leading-relaxed font-medium">
                         {shippingAddress.street}
                       </p>
                       <p className="text-slate-500 font-medium">
@@ -393,9 +390,8 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                 ) : (
                   /* Editable Contact & Address Form */
                   <div className="space-y-4">
-                    {/* Header if editing saved address */}
                     {hasSavedProfile && (
-                      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                      <div className="flex items-center justify-between pb-1">
                         <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                           Edit Delivery Address
                         </span>
@@ -409,7 +405,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                       </div>
                     )}
 
-                    {/* Step 1: Customer Contact Info */}
+                    {/* Contact Information */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
@@ -442,8 +438,8 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                                 setCustomerInfo({ ...customerInfo, name: e.target.value });
                                 if (errors.name) setErrors({ ...errors, name: null });
                               }}
-                              className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border outline-none transition-all ${
-                                errors.name ? 'border-rose-400 bg-rose-50/40' : 'border-transparent focus:border-slate-400 focus:bg-white'
+                              className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 outline-none transition-all ${
+                                errors.name ? 'ring-1 ring-rose-400 bg-rose-50/40' : 'focus:bg-white focus:ring-1 focus:ring-slate-400'
                               }`}
                             />
                           </div>
@@ -464,8 +460,8 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                                 setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') });
                                 if (errors.phone) setErrors({ ...errors, phone: null });
                               }}
-                              className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border outline-none transition-all ${
-                                errors.phone ? 'border-rose-400 bg-rose-50/40' : 'border-transparent focus:border-slate-400 focus:bg-white'
+                              className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 outline-none transition-all ${
+                                errors.phone ? 'ring-1 ring-rose-400 bg-rose-50/40' : 'focus:bg-white focus:ring-1 focus:ring-slate-400'
                               }`}
                             />
                           </div>
@@ -484,13 +480,13 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                             placeholder="e.g. bishal@example.com"
                             value={customerInfo.email}
                             onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                            className="w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                            className="w-full pl-9 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* Step 2: Delivery Address & Map Pin */}
+                    {/* Delivery Address & GPS */}
                     <div className="space-y-3 pt-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
                         <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">2</span>
@@ -509,8 +505,8 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                             setShippingAddress({ ...shippingAddress, street: e.target.value });
                             if (errors.street) setErrors({ ...errors, street: null });
                           }}
-                          className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border outline-none transition-all ${
-                            errors.street ? 'border-rose-400 bg-rose-50/40' : 'border-transparent focus:border-slate-400 focus:bg-white'
+                          className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 outline-none transition-all ${
+                            errors.street ? 'ring-1 ring-rose-400 bg-rose-50/40' : 'focus:bg-white focus:ring-1 focus:ring-slate-400'
                           }`}
                         />
                         {errors.street && <span className="text-[10px] text-rose-500 font-medium">{errors.street}</span>}
@@ -529,7 +525,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                               setShippingAddress({ ...shippingAddress, city: e.target.value });
                               if (errors.city) setErrors({ ...errors, city: null });
                             }}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
                           />
                         </div>
 
@@ -540,7 +536,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                             placeholder="West Bengal"
                             value={shippingAddress.state}
                             onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
                           />
                         </div>
 
@@ -556,7 +552,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                               setShippingAddress({ ...shippingAddress, postalCode: e.target.value.replace(/\D/g, '') });
                               if (errors.postalCode) setErrors({ ...errors, postalCode: null });
                             }}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
                           />
                         </div>
                       </div>
@@ -578,7 +574,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             {deliveryMethod === 'pickup' && (
               <div className="space-y-4">
                 {/* Store Pickup Notice Banner */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                     <Clock className="w-4 h-4" />
                   </div>
@@ -593,7 +589,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                 </div>
 
                 {/* Store Physical Location Card */}
-                <div className="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 space-y-3">
+                <div className="p-4 rounded-2xl bg-[#F4F5F7] space-y-2.5">
                   <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                     <Building2 className="w-4 h-4 text-slate-900" />
                     <span>{settings.storeName || 'Ganapati Store'} Hub</span>
@@ -624,7 +620,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                       <button
                         type="button"
                         onClick={() => setIsEditingPickupPerson(true)}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/60 transition-colors cursor-pointer active:scale-95"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F4F5F7] hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer active:scale-95"
                       >
                         <Edit3 className="w-3 h-3 text-slate-600" />
                         <span>Edit</span>
@@ -633,11 +629,11 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                   </div>
 
                   {customerInfo.name && !isEditingPickupPerson ? (
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 flex items-center justify-between">
+                    <div className="bg-[#F4F5F7] p-3.5 rounded-2xl flex items-center justify-between">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 text-sm">{customerInfo.name}</span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200/60 text-[10px] font-bold">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold shadow-xs">
                             <Check className="w-3 h-3 text-slate-800" />
                             <span>Profile Contact</span>
                           </span>
@@ -669,7 +665,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                             placeholder="e.g. Bishal Mistri"
                             value={customerInfo.name}
                             onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
                           />
                         </div>
 
@@ -682,7 +678,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                             placeholder="98765 43210"
                             value={customerInfo.phone}
                             onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') })}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
                           />
                         </div>
                       </div>
@@ -693,7 +689,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             )}
 
             {/* Payment Method Notice */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5">
+            <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <span className="font-bold text-slate-900 block">
@@ -706,7 +702,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             </div>
 
             {/* Order Items & Cost Breakdown */}
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 text-xs space-y-2">
+            <div className="bg-[#F4F5F7] p-3.5 rounded-2xl text-xs space-y-2">
               <div className="flex justify-between text-slate-600">
                 <span>Items Subtotal ({cartItems.length})</span>
                 <span className="font-semibold text-slate-900">{settings.currency}{subtotal.toFixed(2)}</span>
@@ -721,7 +717,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                   {deliveryFee === 0 ? 'FREE' : `${settings.currency}${deliveryFee.toFixed(2)}`}
                 </span>
               </div>
-              <div className="flex justify-between font-black text-sm text-slate-900 pt-2 border-t border-slate-200">
+              <div className="flex justify-between font-bold text-sm text-slate-900 pt-2">
                 <span>Total Payable ({deliveryMethod === 'shipping' ? 'COD' : 'Pickup'})</span>
                 <span className="text-slate-900 text-base">{settings.currency}{grandTotal.toFixed(2)}</span>
               </div>
@@ -730,7 +726,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
           </div>
 
           {/* Drawer Sticky Footer / Place Order Button */}
-          <div className="p-4 sm:p-5 border-t border-slate-200 bg-white sticky bottom-0 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="p-4 sm:p-5 bg-white sticky bottom-0 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div>
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 Total Payable ({deliveryMethod === 'shipping' ? 'COD' : 'Pickup'}):
