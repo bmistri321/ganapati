@@ -35,6 +35,7 @@ export const WhatsAppLoginModal = () => {
 
   useEffect(() => {
     if (isAuthOpen) {
+      setPhone('');
       setStep('phone');
       setOtpDigits(['', '', '', '', '', '']);
       setLoading(false);
@@ -62,6 +63,7 @@ export const WhatsAppLoginModal = () => {
 
   const closeLoginModal = () => {
     setIsAuthOpen(false);
+    setPhone('');
     setStep('phone');
     setOtpDigits(['', '', '', '', '', '']);
   };
@@ -319,7 +321,7 @@ export const WhatsAppLoginModal = () => {
                       </div>
                       <input
                         type="tel"
-                        placeholder="98765 43210"
+                        placeholder=""
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                         className="w-full pl-16 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all tracking-wider"
