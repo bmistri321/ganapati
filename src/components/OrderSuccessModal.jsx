@@ -1,7 +1,6 @@
 import React from 'react';
-import { Download, ArrowRight, Smartphone, ShieldCheck, Store, Truck, Clock, Check } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Store, Truck, Clock, Check } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
-import { generateTaxInvoicePDF } from '../utils/invoiceGenerator';
 
 export const OrderSuccessModal = ({ orderDetails, onClose }) => {
   const { settings } = useSettings();
@@ -9,13 +8,8 @@ export const OrderSuccessModal = ({ orderDetails, onClose }) => {
   if (!orderDetails) return null;
 
   const order = orderDetails.placedOrder || orderDetails.order || orderDetails;
-  const invoiceNumber = order?.invoice_number || order?.orderId || 'INV-2026';
-  const customerPhone = order?.customer_phone || order?.customer?.phone || settings.whatsappNumber;
+  const orderNumber = order?.invoice_number || order?.orderId || 'ORD-2026';
   const isPickup = order?.deliveryMethod === 'pickup' || orderDetails?.deliveryMethod === 'pickup';
-
-  const downloadInvoicePdf = () => {
-    generateTaxInvoicePDF(order, settings);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -33,19 +27,19 @@ export const OrderSuccessModal = ({ orderDetails, onClose }) => {
           <Check className="w-8 h-8 sm:w-9 sm:h-9 stroke-[3]" />
         </div>
 
-        {/* Title & Invoice ID */}
+        {/* Title & Order ID */}
         <div className="space-y-1">
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             {isPickup ? 'Store Pickup Order Placed!' : 'Order Placed Successfully!'}
           </h2>
           <p className="text-xs text-slate-500">
-            Order & Invoice <strong className="text-slate-900 font-mono">#{invoiceNumber}</strong>
+            Order Reference <strong className="text-slate-900 font-mono">#{orderNumber}</strong>
           </p>
         </div>
 
         {/* Dispatch Notice / Same-day Delivery Banner */}
         {isPickup ? (
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 text-left flex items-start gap-2.5">
+          <div className="p-3.5 rounded-2xl bg-[#F4F5F7] text-xs text-slate-800 text-left flex items-start gap-2.5">
             <Clock className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-slate-900 block">Pickup Time Confirmation Pending</span>
@@ -55,7 +49,7 @@ export const OrderSuccessModal = ({ orderDetails, onClose }) => {
             </div>
           </div>
         ) : (
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 text-left flex items-start gap-2.5">
+          <div className="p-3.5 rounded-2xl bg-[#F4F5F7] text-xs text-slate-800 text-left flex items-start gap-2.5">
             <Truck className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-slate-900 block">⚡ Delivery Expected Today</span>
@@ -66,16 +60,8 @@ export const OrderSuccessModal = ({ orderDetails, onClose }) => {
           </div>
         )}
 
-        {/* WhatsApp Receipt Notice */}
-        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 flex items-center justify-center gap-2">
-          <Smartphone className="w-4 h-4 text-slate-900 shrink-0" />
-          <span>
-            Confirmation receipt sent to <strong>WhatsApp (+91 {customerPhone})</strong>
-          </span>
-        </div>
-
         {/* Order Details Receipt Card */}
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left space-y-2 text-xs">
+        <div className="bg-[#F4F5F7] rounded-2xl p-4 text-left space-y-2 text-xs">
           <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
             <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Customer:</span>
             <span className="font-bold text-slate-900">
@@ -116,23 +102,15 @@ export const OrderSuccessModal = ({ orderDetails, onClose }) => {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-2.5 pt-1">
-          {/* 📄 Download Digital Tax Invoice */}
+        {/* Action Button */}
+        <div className="pt-1">
           <button
-            onClick={downloadInvoicePdf}
+            type="button"
+            onClick={onClose}
             className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer"
           >
-            <Download className="w-4 h-4 text-white" />
-            <span>Download Digital Tax Invoice</span>
-          </button>
-
-          <button
-            onClick={onClose}
-            className="w-full inline-flex items-center justify-center gap-1.5 py-3 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
-          >
             <span>Continue Shopping</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-4 h-4 text-white" />
           </button>
         </div>
 
