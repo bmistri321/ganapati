@@ -603,16 +603,12 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                 <span className="font-semibold text-slate-900">{settings.currency}{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>GST (18% inclusive)</span>
-                <span className="font-semibold text-slate-900">{settings.currency}{((subtotal * 0.18) / 1.18).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
                 <span>{deliveryMethod === 'shipping' ? 'Delivery Fee' : 'Store Pickup'}</span>
                 <span className="font-bold text-slate-900">
                   {deliveryFee === 0 ? 'FREE' : `${settings.currency}${deliveryFee.toFixed(2)}`}
                 </span>
               </div>
-              <div className="flex justify-between font-bold text-sm text-slate-900 pt-2">
+              <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-200/60">
                 <span>Total Payable ({deliveryMethod === 'shipping' ? 'COD' : 'Pickup'})</span>
                 <span className="text-slate-900 text-base">{settings.currency}{grandTotal.toFixed(2)}</span>
               </div>
