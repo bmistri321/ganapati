@@ -275,9 +275,8 @@ export function App() {
             <img
               src="https://res.cloudinary.com/ovj5ffsn/image/upload/v1788721833/freepik-flat-professional-supermarket-green-facebook-header-20260906190851o7W2.png"
               alt="Ganapati Store — Fresh Groceries & Daily Essentials"
-              className="w-full h-auto block object-cover"
+              className="w-full h-auto block"
               loading="eager"
-              style={{ maxHeight: '320px', objectFit: 'cover', objectPosition: 'center' }}
             />
           </section>
 
