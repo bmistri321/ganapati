@@ -210,15 +210,16 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in"
         onClick={() => setIsCheckoutOpen(false)}
       />
 
-      {/* Modal Card - Modern White Minimalist */}
-      <div className="relative bg-white rounded shadow-2xl max-w-2xl w-full overflow-hidden z-10 animate-slide-up border border-slate-200/90 my-auto max-h-[92vh] flex flex-col">
+      {/* Slide-over Right Side Panel */}
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
+        <div className="w-full sm:w-screen sm:max-w-xl bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full">
         
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between bg-white sticky top-0 z-20">
@@ -245,7 +246,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
         </div>
 
         {/* Scrollable Form Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
           
           {/* Step 1: Customer Contact Info */}
           <div className="space-y-3">
@@ -468,5 +469,6 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
       </div>
     </div>
-  );
+  </div>
+);
 };
