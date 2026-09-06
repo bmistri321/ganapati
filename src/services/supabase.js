@@ -132,59 +132,100 @@ export const submitCodOrderToXyvot = async (orderData) => {
   return result; // Order saved in POS > Online Orders + WhatsApp receipt sent!
 };
 
+export function sanitizeWhatsAppPhone(phone) {
+  const clean = (phone || '').toString().replace(/\D/g, '');
+  return clean.slice(-10);
+}
+
 /**
  * Upsert Customer Profile in XYVOT Database
  */
-export async function upsertStoreCustomerProfile({ phone, fullName, name, email, address, city, state, postalCode, gpsLat, gpsLng }) {
-  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-  const last10Digits = cleanPhone.slice(-10);
-
-  const updatedCustomer = {
-    phone: last10Digits,
-    fullName: fullName || name || 'Customer',
-    name: fullName || name || 'Customer',
-    email: email || '',
-    address: address || '',
-    city: city || '',
-    gpsLat: parseFloat(gpsLat || 28.6139),
-    gpsLng: parseFloat(gpsLng || 77.2090),
-    shippingAddress: {
-      street: address || '',
-      city: city || '',
-      state: state || 'Maharashtra',
-      postalCode: postalCode || '400001',
-      coordinates: {
-        lat: parseFloat(gpsLat || 28.6139),
-        lng: parseFloat(gpsLng || 77.2090)
-      }
-    },
-    verified: true,
+export async function upsertStoreCustomerProfile(profileData, orgId) {
+  const formattedPhone = sanitizeWhatsAppPhone(profileData.phone);
+  
+  // Prepare new / updated address object
+  const currentAddress = {
+    id: profileData.addressId || profileData.id || `addr_${Date.now()}`,
+    type: profileData.addressType || profileData.type || profileData.tag || profileData.label || 'Home',
+    fullName: profileData.full_name || profileData.fullName || profileData.name || 'Customer',
+    phone: formattedPhone,
+    email: profileData.email || null,
+    street: profileData.address_line || profileData.street || profileData.address || '',
+    city: profileData.city || 'Habra',
+    state: profileData.state || 'West Bengal',
+    pincode: profileData.pincode || profileData.postalCode || '743263',
+    lat: parseFloat(profileData.gps_lat || profileData.gpsLat || profileData.lat || 22.8291),
+    lng: parseFloat(profileData.gps_lng || profileData.gpsLng || profileData.lng || 88.6148),
+    isDefault: profileData.is_default ?? profileData.isDefault ?? true,
     updatedAt: new Date().toISOString()
   };
 
-  // Save session locally
-  localStorage.setItem('customer_session', JSON.stringify(updatedCustomer));
-
-  // Sync to XYVOT Supabase customers table
-  try {
-    await supabase.from('customers').upsert([
-      {
-        phone: last10Digits,
-        full_name: updatedCustomer.fullName,
-        email: updatedCustomer.email,
-        address: updatedCustomer.address,
-        city: updatedCustomer.city,
-        gps_lat: updatedCustomer.gpsLat,
-        gps_lng: updatedCustomer.gpsLng,
-        updated_at: new Date().toISOString()
+  const customer = {
+    id: profileData.id || `cust_${Date.now()}`,
+    admin_id: orgId || null,
+    phone: formattedPhone,
+    full_name: currentAddress.fullName,
+    fullName: currentAddress.fullName,
+    name: currentAddress.fullName,
+    email: currentAddress.email,
+    address_line: currentAddress.street,
+    address: currentAddress.street,
+    landmark: profileData.landmark || null,
+    city: currentAddress.city,
+    state: currentAddress.state,
+    pincode: currentAddress.pincode,
+    postalCode: currentAddress.pincode,
+    gps_lat: currentAddress.lat,
+    gps_lng: currentAddress.lng,
+    gpsLat: currentAddress.lat,
+    gpsLng: currentAddress.lng,
+    address_type: currentAddress.type,
+    is_phone_verified: true,
+    addresses: profileData.addresses || [currentAddress],
+    shippingAddress: {
+      street: currentAddress.street,
+      city: currentAddress.city,
+      state: currentAddress.state,
+      postalCode: currentAddress.pincode,
+      coordinates: {
+        lat: currentAddress.lat,
+        lng: currentAddress.lng
       }
-    ], { onConflict: 'phone' });
-  } catch (err) {}
+    },
+    updated_at: new Date().toISOString()
+  };
+
+  // Save session locally
+  localStorage.setItem('customer_session', JSON.stringify(customer));
+  localStorage.setItem(`xyvot_customer_${formattedPhone}`, JSON.stringify(customer));
+
+  try {
+    if (orgId) {
+      await supabase.from('store_customers').upsert(customer, { onConflict: 'admin_id,phone' });
+    } else {
+      await supabase.from('customers').upsert([
+        {
+          phone: formattedPhone,
+          full_name: customer.full_name,
+          email: customer.email,
+          address: customer.address,
+          city: customer.city,
+          gps_lat: customer.gps_lat,
+          gps_lng: customer.gps_lng,
+          addresses: customer.addresses,
+          updated_at: new Date().toISOString()
+        }
+      ], { onConflict: 'phone' });
+    }
+  } catch (e) {
+    console.warn('Supabase customer upsert notice:', e);
+  }
 
   return {
     success: true,
     status: 200,
-    customer: updatedCustomer
+    customer,
+    ...customer
   };
 }
 
