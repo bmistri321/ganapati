@@ -173,10 +173,10 @@ export const MyOrdersModal = () => {
                 return (
                   <div
                     key={ord.orderId || ord.id}
-                    className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3 shadow-xs"
+                    className="bg-[#F4F5F7] rounded-2xl p-4 space-y-3 transition-all"
                   >
                     {/* Order Top Bar */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2.5">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs font-black text-slate-900">
@@ -198,7 +198,7 @@ export const MyOrdersModal = () => {
 
                     {/* Real-time Pickup / Delivery Time Banner */}
                     {isPickup ? (
-                      <div className="p-3.5 rounded-2xl bg-[#F4F5F7] text-xs text-slate-800 flex items-start gap-2.5">
+                      <div className="p-3 rounded-xl bg-white text-xs text-slate-800 flex items-start gap-2.5 shadow-xs">
                         <Store className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
                         <div>
                           <span className="font-bold text-slate-900 block">
@@ -212,7 +212,7 @@ export const MyOrdersModal = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3.5 rounded-2xl bg-[#F4F5F7] text-xs text-slate-800 flex items-start gap-2.5">
+                      <div className="p-3 rounded-xl bg-white text-xs text-slate-800 flex items-start gap-2.5 shadow-xs">
                         <Truck className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
                         <div>
                           <span className="font-bold text-slate-900 block">
@@ -227,7 +227,7 @@ export const MyOrdersModal = () => {
 
                     {/* Items preview */}
                     {ord.items && ord.items.length > 0 && (
-                      <div className="space-y-1.5 text-xs text-slate-600 bg-[#F4F5F7] p-3 rounded-2xl">
+                      <div className="space-y-1.5 text-xs text-slate-600 bg-white p-3 rounded-xl shadow-xs">
                         {ord.items.map((item, idx) => (
                           <div key={idx} className="flex justify-between">
                             <span className="font-medium text-slate-700">
@@ -242,7 +242,7 @@ export const MyOrdersModal = () => {
                     )}
 
                     {/* Order Footer */}
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs">
                       <span className="text-slate-500 font-medium">
                         Payment: <strong className="text-slate-800">{ord.payment_method || 'Cash on Delivery (COD)'}</strong>
                       </span>
