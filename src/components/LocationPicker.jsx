@@ -154,7 +154,7 @@ export const LocationPicker = ({ coordinates, onChange, addressHint = '' }) => {
         </div>
       )}
       <p className="text-[11px] text-slate-500">
-        💡 Drag the red pin or click anywhere on the map to mark the exact gate or door for the delivery driver.
+        Drag the blue pin or click the map to mark the delivery gate or door.
       </p>
     </div>
   );
