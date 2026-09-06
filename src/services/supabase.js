@@ -275,3 +275,75 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
     invoice_number: invNumber
   };
 }
+
+/**
+ * Fetch all reviews for a product
+ */
+export async function fetchProductReviews(productId) {
+  try {
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .select('*')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Could not fetch reviews:', err);
+    return [];
+  }
+}
+
+/**
+ * Submit a new product review (1 per customer per product)
+ */
+export async function submitProductReview({ productId, productName, customerPhone, customerName, rating, reviewText }) {
+  try {
+    // Check if customer already reviewed this product
+    const { data: existing } = await supabase
+      .from('product_reviews')
+      .select('id')
+      .eq('product_id', productId)
+      .eq('customer_phone', customerPhone)
+      .maybeSingle();
+
+    if (existing) {
+      // Update existing review
+      const { data, error } = await supabase
+        .from('product_reviews')
+        .update({
+          rating,
+          review_text: reviewText,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, review: data, updated: true };
+    }
+
+    // Insert new review
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .insert([{
+        product_id: productId,
+        product_name: productName,
+        customer_phone: customerPhone,
+        customer_name: customerName,
+        rating,
+        review_text: reviewText,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, review: data, updated: false };
+  } catch (err) {
+    console.warn('Could not submit review:', err);
+    return { success: false, error: err.message };
+  }
+}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
-  Star, 
   ShoppingCart, 
   Check, 
   Package, 
@@ -12,6 +11,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 import { ProductCard } from './ProductCard';
+import { ProductReviews } from './ProductReviews';
 
 export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduct }) => {
   const { addToCart, setIsCheckoutOpen, cartItems } = useCart();
@@ -335,84 +335,8 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
           </div>
 
           {activeTab === 'reviews' ? (
-            /* Reviews Content Grid */
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center pt-2">
-              
-              {/* Overall Score */}
-              <div className="md:col-span-3 space-y-1.5 text-left">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl font-bold text-slate-900">4.5</span>
-                  <span className="text-xs text-slate-400">out of 5</span>
-                </div>
-                <div className="flex items-center gap-1 text-amber-400">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                </div>
-                <p className="text-xs text-slate-400 pt-0.5">
-                  ({product.reviewsCount || 245} Review)
-                </p>
-              </div>
-
-              {/* Star Rating Breakdown Progress Bars */}
-              <div className="md:col-span-5 space-y-2 text-xs text-slate-600">
-                <div className="flex items-center gap-3">
-                  <span className="w-10 flex-shrink-0 text-slate-700">5 Star</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: '82%' }} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="w-10 flex-shrink-0 text-slate-700">4 Star</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: '65%' }} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="w-10 flex-shrink-0 text-slate-700">3 Star</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: '25%' }} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="w-10 flex-shrink-0 text-slate-700">2 Star</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: '12%' }} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="w-10 flex-shrink-0 text-slate-700">1 Star</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: '4%' }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Review this Product CTA */}
-              <div className="md:col-span-4 text-center md:text-right space-y-2 md:pl-6 border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0">
-                <h3 className="text-base font-bold text-slate-900">
-                  Review this product
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Share your thoughts with other customers
-                </p>
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => alert('Thank you for submitting your verified feedback!')}
-                    className="inline-block px-6 py-2.5 rounded-full border border-slate-800 hover:bg-slate-900 hover:text-white text-slate-800 text-xs font-semibold transition-all cursor-pointer"
-                  >
-                    Write a customer review
-                  </button>
-                </div>
-              </div>
-
+            <div className="pt-2">
+              <ProductReviews product={product} />
             </div>
           ) : (
             /* Detailed Description Content */
