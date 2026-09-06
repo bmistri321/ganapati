@@ -10,10 +10,20 @@ const AuthContext = createContext();
 const SESSION_KEY = 'customer_session';
 
 export const AuthProvider = ({ children }) => {
-  const [customer, setCustomer] = useState(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(true);
+  const [customer, setCustomer] = useState({
+    id: 'demo-cust-1',
+    fullName: 'Bishal Mistri',
+    phone: '9876543210',
+    email: 'bishal@example.com',
+    address: 'Station Road, 4no Gali, Habra',
+    city: 'Habra / Ashoknagar',
+    postalCode: '743263',
+    gpsLat: 22.8291,
+    gpsLng: 88.6148
+  });
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(true);
 
   // OTP Verification State
   const [otpState, setOtpState] = useState({
