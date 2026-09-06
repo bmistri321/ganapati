@@ -372,7 +372,16 @@ export const WhatsAppLoginModal = () => {
         {step === 'onboarding' && (
           /* Step 3: First-Time User Profile & Address Setup */
           <div className="space-y-5 pb-6">
-            <form onSubmit={handleSaveOnboarding} className="space-y-4">
+            <div className="space-y-1.5 pb-1">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                Set Up Your Delivery Profile
+              </h2>
+              <p className="text-xs text-slate-500">
+                Please enter your delivery details once. Next time, enjoy 1-click checkout!
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveOnboarding} className="space-y-4 pt-1">
               {/* Full Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
