@@ -22,29 +22,44 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
 
   // Real XYVOT variants
   const variants = product?.variants || [];
-  const hasRealVariants = Boolean(product?.hasVariants && variants.length > 0);
-  const [selectedVariant, setSelectedVariant] = useState(hasRealVariants ? variants[0] : null);
+  const hasRealVariants = Boolean((product?.has_variants || product?.hasVariants) && Array.isArray(variants) && variants.length > 0);
+  
+  const [selectedVariant, setSelectedVariant] = useState(() => {
+    if ((product?.has_variants || product?.hasVariants) && Array.isArray(product?.variants) && product.variants.length > 0) {
+      return product.variants.find((v) => (v.stock_quantity || 0) > 0) || product.variants[0];
+    }
+    return null;
+  });
 
   // Scroll to top when product changes & sync active variant
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (product) {
-      setSelectedImage(product.image || '');
+      setSelectedImage(product.image_url || product.image || '');
       setQuantity(1);
-      const prodVariants = product.variants || [];
-      setSelectedVariant(product.hasVariants && prodVariants.length > 0 ? prodVariants[0] : null);
+      const vList = product.variants || [];
+      const hasV = Boolean((product.has_variants || product.hasVariants) && Array.isArray(vList) && vList.length > 0);
+      setSelectedVariant(hasV ? (vList.find((v) => (v.stock_quantity || 0) > 0) || vList[0]) : null);
     }
   }, [product]);
 
   if (!product) return null;
 
-  const validImages = (product.images || [product.image]).filter(Boolean);
-  if (validImages.length === 0 && product.image) validImages.push(product.image);
+  const validImages = (product.images || [product.image_url || product.image]).filter(Boolean);
+  if (validImages.length === 0 && (product.image_url || product.image)) {
+    validImages.push(product.image_url || product.image);
+  }
 
   // Active pricing & stock calculation
-  const currentPrice = selectedVariant ? selectedVariant.selling_price : product.price;
-  const currentStock = selectedVariant ? selectedVariant.stock_quantity : product.stock;
-  const currentSku = selectedVariant ? (selectedVariant.sku || product.sku) : product.sku;
+  const currentPrice = selectedVariant 
+    ? parseFloat(selectedVariant.selling_price) 
+    : parseFloat(product.selling_price ?? product.price ?? 0);
+  const currentStock = selectedVariant 
+    ? (selectedVariant.stock_quantity || 0) 
+    : (product.stock_quantity ?? product.stock ?? 0);
+  const currentSku = selectedVariant 
+    ? (selectedVariant.sku || product.sku) 
+    : (product.sku || '');
   const isOutOfStock = currentStock <= 0;
   const isLowStock = currentStock > 0 && currentStock <= (selectedVariant?.low_stock_threshold || 3);
 

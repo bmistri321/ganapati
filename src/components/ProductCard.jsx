@@ -7,7 +7,12 @@ export const ProductCard = ({ product, onSelectProduct }) => {
   const { addToCart, updateQuantity, cartItems } = useCart();
   const { settings } = useSettings();
 
-  const cartItem = cartItems.find((i) => i.id === product.id);
+  const hasVariants = Boolean((product.has_variants || product.hasVariants) && Array.isArray(product.variants) && product.variants.length > 0);
+  const minPrice = hasVariants
+    ? Math.min(...product.variants.map((v) => parseFloat(v.selling_price ?? v.price ?? product.price ?? 0)))
+    : parseFloat(product.selling_price ?? product.price ?? 0);
+
+  const cartItem = cartItems.find((i) => (i.id === product.id || i.cartKey === product.id));
   const qtyInCart = cartItem ? cartItem.quantity : 0;
   const isOutOfStock = product.stock <= 0;
   const isLowStock = product.stock > 0 && product.stock <= 3;
@@ -21,10 +26,10 @@ export const ProductCard = ({ product, onSelectProduct }) => {
         className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
         onClick={() => onSelectProduct(product)}
       >
-        {product.image ? (
+        {product.image_url || product.image ? (
           <img
-            src={product.image}
-            alt={product.title}
+            src={product.image_url || product.image}
+            alt={product.title || product.name}
             loading="lazy"
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
           />
@@ -34,7 +39,7 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           </div>
         )}
 
-        {/* Stock Quantity Badge (Replacing 10min) */}
+        {/* Stock Quantity Badge */}
         <div className="absolute top-1.5 left-1.5 z-10 flex flex-col gap-1">
           {isOutOfStock ? (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-900/90 text-rose-100 border border-rose-500/30 shadow-xs">
@@ -68,16 +73,16 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           <h3 
             onClick={() => onSelectProduct(product)}
             className="font-bold text-slate-900 text-xs sm:text-sm line-clamp-2 hover:text-emerald-600 transition-colors cursor-pointer leading-snug"
-            title={product.title}
+            title={product.title || product.name}
           >
-            {product.title}
+            {product.title || product.name}
           </h3>
 
           {/* Unit / Options / Category Info */}
           <div className="flex items-center gap-1.5 mt-1">
-            {product.hasVariants && product.variants?.length > 0 ? (
+            {hasVariants ? (
               <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
-                {product.variants.length} options
+                {product.variants.length} Options
               </span>
             ) : product.unit ? (
               <span className="text-[11px] text-slate-500 font-medium truncate">
@@ -96,7 +101,7 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           <div className="min-w-0">
             <div className="flex items-baseline gap-1">
               <span className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                {product.hasVariants ? 'from ' : ''}{settings.currency}{product.price.toFixed(0)}
+                {hasVariants ? `From ${settings.currency}${minPrice.toFixed(0)}` : `${settings.currency}${product.price.toFixed(0)}`}
               </span>
               {product.originalPrice && (
                 <span className="text-[10px] text-slate-400 line-through">
@@ -106,8 +111,8 @@ export const ProductCard = ({ product, onSelectProduct }) => {
             </div>
           </div>
 
-          {/* Blinkit-Style Green ADD / Stepper Button */}
-          {product.hasVariants ? (
+          {/* Blinkit-Style Green ADD / SELECT Button */}
+          {hasVariants ? (
             <button
               onClick={() => onSelectProduct(product)}
               disabled={isOutOfStock}

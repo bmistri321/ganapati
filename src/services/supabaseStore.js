@@ -71,21 +71,26 @@ export async function fetchLiveProductsFromBackend() {
 
         return {
           id: p.id,
+          name: p.name || p.title || 'Product Item',
           title: p.name || p.title || 'Product Item',
           category: p.category || 'General',
           price: effectivePrice,
+          selling_price: effectivePrice,
           originalPrice: originalPrice && !isNaN(originalPrice) ? originalPrice : null,
           rating: parseFloat(p.rating) || 4.9,
           reviewsCount: parseInt(p.reviews_count ?? 48, 10),
           stock: effectiveStock,
+          stock_quantity: effectiveStock,
           badge: effectiveStock <= 3 && effectiveStock > 0 ? 'Low Stock' : (p.badge || (p.featured ? 'Featured' : null)),
           image: primaryImage,
+          image_url: primaryImage,
           images: imageList,
           description: p.description || `${p.name || 'Product'} - Real-time verified item from inventory.`,
           features: Array.isArray(p.features) && p.features.length > 0 
             ? p.features 
             : ['Verified Inventory Item', 'Direct WhatsApp Dispatch'],
           // Real XYVOT Variant Fields
+          has_variants: hasVariants,
           hasVariants: hasVariants,
           variants: cleanVariants,
           unit: p.unit || p.weight || '',

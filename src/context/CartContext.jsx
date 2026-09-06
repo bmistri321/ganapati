@@ -28,20 +28,24 @@ export const CartProvider = ({ children }) => {
   }, [cartItems]);
 
   const addToCart = (product, quantity = 1, selectedVariant = null) => {
-    const itemStock = selectedVariant ? (parseInt(selectedVariant.stock_quantity ?? selectedVariant.stock ?? 0, 10)) : (product.stock || 0);
-    const itemPrice = selectedVariant ? (parseFloat(selectedVariant.selling_price ?? selectedVariant.price ?? product.price)) : product.price;
+    const itemStock = selectedVariant 
+      ? parseInt(selectedVariant.stock_quantity ?? selectedVariant.stock ?? 0, 10) 
+      : parseInt(product.stock_quantity ?? product.stock ?? 0, 10);
+    const itemPrice = selectedVariant 
+      ? parseFloat(selectedVariant.selling_price ?? selectedVariant.price) 
+      : parseFloat(product.selling_price ?? product.price ?? 0);
     const variantLabel = selectedVariant ? (selectedVariant.name || selectedVariant.size) : null;
-    const itemKey = selectedVariant ? `${product.id}_${selectedVariant.id}` : product.id;
+    const cartKey = selectedVariant ? `${product.id}_${selectedVariant.id}` : product.id;
 
     if (itemStock <= 0) {
-      showToast(`Sorry, "${product.title}${variantLabel ? ` (${variantLabel})` : ''}" is out of stock.`, 'warning');
+      showToast(`Sorry, "${product.title || product.name}${variantLabel ? ` (${variantLabel})` : ''}" is out of stock.`, 'warning');
       return false;
     }
 
     let addedSuccessfully = false;
 
     setCartItems((prevItems) => {
-      const existingIndex = prevItems.findIndex((item) => (item.cartItemId || item.id) === itemKey);
+      const existingIndex = prevItems.findIndex((item) => (item.cartKey || item.cartItemId || item.id) === cartKey);
 
       if (existingIndex > -1) {
         const currentQty = prevItems[existingIndex].quantity;
@@ -49,7 +53,7 @@ export const CartProvider = ({ children }) => {
 
         if (newQty > itemStock) {
           showToast(
-            `Stock limit reached: Only ${itemStock} units available for "${product.title}${variantLabel ? ` (${variantLabel})` : ''}".`,
+            `Stock limit reached: Only ${itemStock} units available for "${product.title || product.name}${variantLabel ? ` (${variantLabel})` : ''}".`,
             'warning'
           );
           return prevItems;
@@ -75,28 +79,38 @@ export const CartProvider = ({ children }) => {
           ...prevItems, 
           { 
             ...product, 
-            cartItemId: itemKey,
+            cartKey: cartKey,
+            cartItemId: cartKey,
+            id: product.id,
+            variantId: selectedVariant?.id || null,
+            variantName: variantLabel,
+            sku: selectedVariant?.sku || product.sku || '',
+            name: product.name || product.title,
+            title: product.title || product.name,
             price: itemPrice,
+            quantity: quantity,
+            stockQuantity: itemStock,
             stock: itemStock,
-            selectedVariant: selectedVariant || null,
-            quantity 
+            imageUrl: product.image_url || product.image || (product.images && product.images[0]) || '',
+            image: product.image_url || product.image || (product.images && product.images[0]) || '',
+            selectedVariant: selectedVariant || null
           }
         ];
       }
     });
 
     if (addedSuccessfully) {
-      setJustAddedId(itemKey);
+      setJustAddedId(cartKey);
       setTimeout(() => setJustAddedId(null), 1200);
-      showToast(`Added "${product.title}${variantLabel ? ` (${variantLabel})` : ''}" to cart!`, 'success');
+      showToast(`Added "${product.title || product.name}${variantLabel ? ` (${variantLabel})` : ''}" to cart!`, 'success');
       return true;
     }
     return false;
   };
 
-  const updateQuantity = (cartItemId, newQuantity, maxStock) => {
+  const updateQuantity = (cartKey, newQuantity, maxStock) => {
     if (newQuantity <= 0) {
-      removeFromCart(cartItemId);
+      removeFromCart(cartKey);
       return;
     }
 
@@ -107,17 +121,19 @@ export const CartProvider = ({ children }) => {
 
     setCartItems((prevItems) =>
       prevItems.map((item) =>
-        (item.cartItemId || item.id) === cartItemId ? { ...item, quantity: newQuantity } : item
+        (item.cartKey || item.cartItemId || item.id) === cartKey 
+          ? { ...item, quantity: Math.min(newQuantity, item.stockQuantity || item.stock || maxStock || newQuantity) } 
+          : item
       )
     );
   };
 
-  const removeFromCart = (cartItemId) => {
-    const item = cartItems.find((i) => (i.cartItemId || i.id) === cartItemId);
-    setCartItems((prevItems) => prevItems.filter((i) => (i.cartItemId || i.id) !== cartItemId));
+  const removeFromCart = (cartKey) => {
+    const item = cartItems.find((i) => (i.cartKey || i.cartItemId || i.id) === cartKey);
+    setCartItems((prevItems) => prevItems.filter((i) => (i.cartKey || i.cartItemId || i.id) !== cartKey));
     if (item) {
-      const vLabel = item.selectedVariant ? ` (${item.selectedVariant.name || item.selectedVariant.size})` : '';
-      showToast(`Removed "${item.title}${vLabel}" from cart`, 'info');
+      const vLabel = item.variantName || (item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : '');
+      showToast(`Removed "${item.title || item.name}${vLabel ? ` (${vLabel})` : ''}" from cart`, 'info');
     }
   };
 

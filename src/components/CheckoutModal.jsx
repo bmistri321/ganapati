@@ -133,16 +133,23 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
         subtotal: subtotal,
         deliveryFee: deliveryFee,
         items: cartItems.map((item) => {
-          const vLabel = item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : null;
+          const vLabel = item.variantName || (item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : null);
+          const vId = item.variantId || item.selectedVariant?.id || null;
+          const vSku = item.sku || item.selectedVariant?.sku || '';
+          const itemName = vLabel ? `${item.title || item.name} (${vLabel})` : (item.title || item.name);
           return {
             id: item.id,
-            variant_id: item.selectedVariant?.id || null,
-            sku: item.selectedVariant?.sku || item.sku || null,
+            product_id: item.id,
+            variant_id: vId,
             variant_name: vLabel,
-            product_name: vLabel ? `${item.title || item.name} (${vLabel})` : (item.title || item.name),
-            quantity: item.quantity,
+            sku: vSku,
+            name: itemName,
+            product_name: itemName,
+            price: item.price,
             unit_price: item.price,
-            image: item.image
+            quantity: item.quantity,
+            subtotal: item.price * item.quantity,
+            image: item.image || item.imageUrl || ''
           };
         })
       };

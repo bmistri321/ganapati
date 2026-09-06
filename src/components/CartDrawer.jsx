@@ -126,9 +126,9 @@ export const CartDrawer = () => {
               </div>
             ) : (
               cartItems.map((item) => {
-                const itemKey = item.cartItemId || item.id;
-                const isMax = item.quantity >= item.stock;
-                const variantLabel = item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : null;
+                const itemKey = item.cartKey || item.cartItemId || item.id;
+                const isMax = item.quantity >= (item.stockQuantity || item.stock);
+                const variantLabel = item.variantName || (item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : null);
                 return (
                   <div
                     key={itemKey}
@@ -136,10 +136,10 @@ export const CartDrawer = () => {
                   >
                     {/* Thumbnail (100% Full Fill Edge-to-Edge) */}
                     <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0">
-                      {item.image ? (
+                      {item.image_url || item.image ? (
                         <img
-                          src={item.image}
-                          alt={item.title}
+                          src={item.image_url || item.image}
+                          alt={item.title || item.name}
                           className="w-full h-full object-cover"
                         />
                       ) : (
