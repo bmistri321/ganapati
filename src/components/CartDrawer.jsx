@@ -80,7 +80,7 @@ export const CartDrawer = () => {
           </div>
 
           {/* Cart Item List */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-5 space-y-3 py-2">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-5 divide-y divide-slate-100">
             {cartItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
                 <div className="w-16 h-16 rounded-full bg-[#F4F5F7] flex items-center justify-center text-slate-500">
@@ -108,7 +108,7 @@ export const CartDrawer = () => {
                 return (
                   <div
                     key={itemKey}
-                    className="py-1.5 flex gap-3.5 items-center transition-all"
+                    className="py-3.5 sm:py-4 flex gap-3.5 items-center transition-all"
                   >
                     {/* Thumbnail */}
                     <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-xl overflow-hidden bg-[#F4F5F7] flex items-center justify-center flex-shrink-0">
