@@ -80,7 +80,7 @@ export const CartDrawer = () => {
           </div>
 
           {/* Cart Item List */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-5 divide-y divide-slate-100">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
             {cartItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
                 <div className="w-16 h-16 rounded-full bg-[#F4F5F7] flex items-center justify-center text-slate-500">
@@ -108,10 +108,10 @@ export const CartDrawer = () => {
                 return (
                   <div
                     key={itemKey}
-                    className="py-3.5 sm:py-4 flex gap-3.5 items-center transition-all"
+                    className="p-3.5 bg-[#F4F5F7] rounded-2xl flex gap-3.5 items-center transition-all"
                   >
                     {/* Thumbnail */}
-                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-xl overflow-hidden bg-[#F4F5F7] flex items-center justify-center flex-shrink-0">
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-xl overflow-hidden bg-white flex items-center justify-center flex-shrink-0 shadow-xs">
                       {item.image_url || item.image ? (
                         <img
                           src={item.image_url || item.image}
@@ -142,7 +142,7 @@ export const CartDrawer = () => {
                         
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {variantLabel && (
-                            <span className="text-[10px] font-bold bg-[#F4F5F7] text-slate-700 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold bg-white text-slate-700 px-2 py-0.5 rounded-full shadow-xs">
                               {variantLabel}
                             </span>
                           )}
@@ -154,7 +154,7 @@ export const CartDrawer = () => {
 
                       <div className="flex items-center justify-between mt-2.5">
                         {/* Stepper */}
-                        <div className="flex items-center bg-[#F4F5F7] rounded-xl px-1.5 py-0.5">
+                        <div className="flex items-center bg-white rounded-xl px-1.5 py-0.5 shadow-xs border border-slate-200/50">
                           <button
                             type="button"
                             onClick={() => updateQuantity(itemKey, item.quantity - 1, item.stock)}
@@ -199,7 +199,7 @@ export const CartDrawer = () => {
           {/* Footer / Breakdown & Checkout Action */}
           {cartItems.length > 0 && (
             <div className="p-4 sm:p-5 border-t border-slate-100 bg-white space-y-3.5">
-              <div className="text-xs space-y-2 pb-1">
+              <div className="bg-[#F4F5F7] p-3.5 rounded-2xl text-xs space-y-2">
                 <div className="flex justify-between text-slate-600">
                   <span>Items Subtotal ({totalItemsCount})</span>
                   <span className="font-semibold text-slate-900 font-mono">{settings.currency}{subtotal.toFixed(2)}</span>
@@ -208,7 +208,7 @@ export const CartDrawer = () => {
                   <span>Estimated Fulfillment</span>
                   <span className="text-slate-500 font-medium">Calculated at checkout</span>
                 </div>
-                <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-100">
+                <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-200/60">
                   <span>Subtotal Amount</span>
                   <span className="text-base font-black text-slate-900 font-mono">{settings.currency}{subtotal.toFixed(2)}</span>
                 </div>
