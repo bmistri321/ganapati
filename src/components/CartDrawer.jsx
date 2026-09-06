@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Trash2, ShoppingBag, ArrowRight, Plus, Minus, AlertCircle, Sparkles, Package } from 'lucide-react';
+import { X, Trash2, ShoppingBag, ArrowRight, Plus, Minus, AlertCircle, Sparkles, Package, Lock } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 
@@ -243,8 +243,9 @@ export const CartDrawer = () => {
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <p className="text-[11px] text-center text-slate-400">
-                🔒 Safe & Secure &bull; Cash on Delivery &bull; Instant WhatsApp Dispatch
+              <p className="text-[11px] text-center text-slate-400 flex items-center justify-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Safe & Secure &bull; Cash on Delivery</span>
               </p>
             </div>
           )}
