@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ArrowRight, CheckCircle, Smartphone, User, MapPin, Mail, Home, Navigation, Sparkles } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, Smartphone, User, MapPin, Mail, Home, Navigation } from 'lucide-react';
 import { requestStoreWhatsAppOtp, verifyStoreWhatsAppOtp, upsertStoreCustomerProfile } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -263,27 +263,23 @@ export const WhatsAppLoginModal = () => {
           </div>
 
           {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-7 flex flex-col justify-center">
 
         {step === 'phone' && (
           /* Step 1: Mobile Phone Number Input */
-          <div className="space-y-6 pt-2 sm:pt-0">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-100 mb-2">
-                <Sparkles className="w-3 h-3 text-emerald-600" />
-                <span>Instant 1-Click WhatsApp Login</span>
-              </div>
+          <div className="w-full max-w-sm mx-auto space-y-6 text-center my-auto">
+            <div className="space-y-1.5">
               <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                 Welcome to Ganapati Store
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                 Enter your WhatsApp number to receive an instant 6-digit verification code.
               </p>
             </div>
 
-            <form onSubmit={handleSendOtp} className="space-y-4">
+            <form onSubmit={handleSendOtp} className="space-y-4 text-left">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 text-center">
                   WhatsApp Mobile Number
                 </label>
                 <div className="relative flex items-center">
@@ -296,7 +292,7 @@ export const WhatsAppLoginModal = () => {
                     placeholder="98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                    className="w-full pl-14 pr-3.5 py-3 text-sm font-semibold bg-[#F4F5F7] hover:bg-[#EAECEF] focus:bg-white rounded-xl border border-transparent focus:border-slate-400 outline-none transition-all"
+                    className="w-full pl-14 pr-3.5 py-3 text-sm font-semibold bg-[#F4F5F7] hover:bg-[#EAECEF] focus:bg-white rounded-xl border border-transparent focus:border-slate-400 outline-none transition-all text-center tracking-wider"
                     autoFocus
                   />
                 </div>
@@ -322,19 +318,19 @@ export const WhatsAppLoginModal = () => {
 
         {step === 'otp' && (
           /* Step 2: 6-Digit OTP Verification */
-          <div className="space-y-6 pt-2 sm:pt-0">
-            <div>
+          <div className="w-full max-w-sm mx-auto space-y-6 text-center my-auto">
+            <div className="space-y-1.5">
               <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                 Enter WhatsApp OTP
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                 Enter the 6-digit code sent to <strong className="text-slate-900 font-bold">+91 {phone}</strong>
               </p>
             </div>
 
             <form onSubmit={handleVerifyOtp} className="space-y-5">
               {/* 6 Soft Light-Gray Boxes */}
-              <div className="flex justify-between gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
+              <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
                 {otpDigits.map((digit, index) => (
                   <input
                     key={index}
