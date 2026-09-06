@@ -10,6 +10,8 @@ import { inventoryApi } from './services/inventoryApi';
 import { useSettings } from './context/SettingsContext';
 import { useCart } from './context/CartContext';
 import { useToast } from './context/ToastContext';
+import { useAuth } from './context/AuthContext';
+import { supabase } from './services/supabase';
 import { 
   SlidersHorizontal, 
   ArrowUpDown, 
@@ -36,6 +38,8 @@ export function App() {
   const { settings } = useSettings();
   const { totalItemsCount, setIsCartOpen } = useCart();
   const { showToast } = useToast();
+  const { customer, currentCustomer } = useAuth();
+  const activeCustomer = currentCustomer || customer;
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -169,6 +173,44 @@ export function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Real-time listener for XYVOT store order approvals & status changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('store_orders_realtime_notifications')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'sales_orders' },
+        (payload) => {
+          const updatedOrder = payload.new;
+          if (!updatedOrder) return;
+
+          const orderPhone = (updatedOrder.customer_phone || '').replace(/\D/g, '');
+          const customerPhone = (activeCustomer?.phone || '').replace(/\D/g, '');
+
+          // If this order belongs to the active customer or is recent
+          if (customerPhone && orderPhone.endsWith(customerPhone.slice(-10))) {
+            const status = (updatedOrder.status || '').toLowerCase();
+            const inv = updatedOrder.invoice_number || 'your order';
+
+            if (status.includes('confirmed') || status.includes('approved')) {
+              showToast(`🎉 Order #${inv} has been Confirmed by Store! Estimated dispatch/pickup: Today.`, 'success');
+            } else if (status.includes('ready')) {
+              showToast(`🏬 Order #${inv} is Ready for Pickup at Ganapati Store!`, 'success');
+            } else if (status.includes('dispatched') || status.includes('way') || status.includes('out_for_delivery')) {
+              showToast(`🚚 Order #${inv} is Out for Delivery to your doorstep!`, 'info');
+            } else if (status.includes('delivered') || status.includes('completed')) {
+              showToast(`✓ Order #${inv} has been Delivered successfully!`, 'success');
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeCustomer]);
 
   const handleRefreshInventory = async () => {
     setIsRefreshing(true);

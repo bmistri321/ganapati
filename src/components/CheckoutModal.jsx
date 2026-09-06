@@ -1,5 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, Mail, Truck, Store, MapPin, CheckCircle2, MessageCircle, AlertCircle, ArrowLeft, ShieldCheck, Clock, Sparkles } from 'lucide-react';
+import { 
+  X, 
+  User, 
+  Phone, 
+  Mail, 
+  Truck, 
+  Store, 
+  MapPin, 
+  CheckCircle2, 
+  MessageCircle, 
+  AlertCircle, 
+  ArrowLeft, 
+  ShieldCheck, 
+  Clock, 
+  Sparkles,
+  Edit3,
+  Check,
+  Building2,
+  CalendarCheck
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
@@ -13,13 +32,17 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   const { isCheckoutOpen, setIsCheckoutOpen, cartItems, subtotal, clearCart } = useCart();
   const { settings } = useSettings();
   const { showToast } = useToast();
-  const { currentCustomer, customer, updateProfile } = useAuth();
+  const { currentCustomer, customer, setIsAuthOpen } = useAuth();
 
   const activeCustomer = currentCustomer || customer;
 
-  const [deliveryMethod, setDeliveryMethod] = useState('shipping'); // 'shipping' | 'pickup'
+  // Delivery Method: 'shipping' (Home Delivery) | 'pickup' (Store Pickup)
+  const [deliveryMethod, setDeliveryMethod] = useState('shipping');
 
-  // Contact State (Pre-filled from auth profile if available)
+  // Whether user is in "Edit Address" mode or "Saved Address" card mode
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+
+  // Contact State
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
@@ -29,11 +52,11 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   // Shipping Address State
   const [shippingAddress, setShippingAddress] = useState({
     street: '',
-    city: '',
-    state: '',
-    postalCode: '',
+    city: 'Habra',
+    state: 'West Bengal',
+    postalCode: '743263',
     notes: '',
-    coordinates: { lat: 28.6139, lng: 77.2090 }
+    coordinates: { lat: 22.8291, lng: 88.6148 }
   });
 
   const [errors, setErrors] = useState({});
@@ -42,24 +65,39 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
   // Sync with customer auth profile
   useEffect(() => {
     if (activeCustomer) {
+      const custName = activeCustomer.fullName || activeCustomer.name || '';
+      const custPhone = activeCustomer.phone || '';
+      const custEmail = activeCustomer.email || '';
+      const custStreet = activeCustomer.address || activeCustomer.shippingAddress?.street || '';
+      const custCity = activeCustomer.city || activeCustomer.shippingAddress?.city || 'Habra';
+      const custState = activeCustomer.state || activeCustomer.shippingAddress?.state || 'West Bengal';
+      const custPincode = activeCustomer.postalCode || activeCustomer.shippingAddress?.postalCode || '743263';
+      const custLat = activeCustomer.gpsLat || activeCustomer.shippingAddress?.coordinates?.lat || 22.8291;
+      const custLng = activeCustomer.gpsLng || activeCustomer.shippingAddress?.coordinates?.lng || 88.6148;
+
       setCustomerInfo({
-        name: activeCustomer.fullName || activeCustomer.name || '',
-        phone: activeCustomer.phone || '',
-        email: activeCustomer.email || ''
+        name: custName !== 'Verified Customer' ? custName : '',
+        phone: custPhone,
+        email: custEmail
       });
-      if (activeCustomer.shippingAddress || activeCustomer.address) {
-        setShippingAddress({
-          street: activeCustomer.address || activeCustomer.shippingAddress?.street || '',
-          city: activeCustomer.city || activeCustomer.shippingAddress?.city || '',
-          state: activeCustomer.state || activeCustomer.shippingAddress?.state || '',
-          postalCode: activeCustomer.postalCode || activeCustomer.shippingAddress?.postalCode || '',
-          notes: activeCustomer.notes || activeCustomer.shippingAddress?.notes || '',
-          coordinates: {
-            lat: activeCustomer.gpsLat || activeCustomer.shippingAddress?.coordinates?.lat || 28.6139,
-            lng: activeCustomer.gpsLng || activeCustomer.shippingAddress?.coordinates?.lng || 77.2090
-          }
-        });
+
+      setShippingAddress({
+        street: custStreet,
+        city: custCity,
+        state: custState,
+        postalCode: custPincode,
+        notes: activeCustomer.notes || '',
+        coordinates: { lat: custLat, lng: custLng }
+      });
+
+      // If user has saved name and address, default to clean saved-address view
+      if (custName && custStreet) {
+        setIsEditingAddress(false);
+      } else {
+        setIsEditingAddress(true);
       }
+    } else {
+      setIsEditingAddress(true);
     }
   }, [activeCustomer, isCheckoutOpen]);
 
@@ -80,6 +118,13 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
   const grandTotal = subtotal + deliveryFee;
 
+  const hasSavedProfile = Boolean(
+    activeCustomer && 
+    customerInfo.name.trim() && 
+    customerInfo.phone.trim() && 
+    shippingAddress.street.trim()
+  );
+
   const validate = () => {
     const errs = {};
     if (!customerInfo.name.trim()) errs.name = 'Full name is required';
@@ -99,105 +144,90 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
     return Object.keys(errs).length === 0;
   };
 
-  /**
-   * 3. COD Checkout Submission
-   */
-  const handlePlaceCodOrder = async () => {
+  const handlePlaceCodOrder = async (e) => {
+    e.preventDefault();
     if (!validate()) {
-      showToast('Please fill in all required fields.', 'error');
-      return;
-    }
-
-    if (cartItems.length === 0) {
-      showToast('Your cart is empty', 'warning');
+      showToast('Please fill in all required delivery details', 'error');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const fullDeliveryAddress = deliveryMethod === 'shipping'
-        ? `${shippingAddress.street}, ${shippingAddress.city}, ${shippingAddress.state || ''} ${shippingAddress.postalCode || ''}`.trim()
-        : 'Store Pickup';
-
+      // 1. Format order payload
       const orderPayload = {
-        customer_name: customerInfo.name || activeCustomer?.fullName || 'Website Customer',
-        customer_phone: customerInfo.phone || activeCustomer?.phone || '',
-        customer_email: customerInfo.email || activeCustomer?.email || '',
-        delivery_address: fullDeliveryAddress,
-        gps_lat: shippingAddress.coordinates?.lat || activeCustomer?.gpsLat || 28.6139,
-        gps_lng: shippingAddress.coordinates?.lng || activeCustomer?.gpsLng || 77.2090,
+        customer_name: customerInfo.name.trim(),
+        customer_phone: customerInfo.phone.trim(),
+        customer_email: customerInfo.email.trim() || null,
+        delivery_address: deliveryMethod === 'shipping' 
+          ? `${shippingAddress.street.trim()}, ${shippingAddress.city.trim()}, ${shippingAddress.postalCode.trim()}`
+          : `Store Pickup: ${settings.storeName || 'Ganapati Store'} (${settings.storeAddress || 'Main Market Road, Habra, West Bengal 743263'})`,
+        gps_lat: deliveryMethod === 'shipping' ? shippingAddress.coordinates.lat : 22.8291,
+        gps_lng: deliveryMethod === 'shipping' ? shippingAddress.coordinates.lng : 88.6148,
+        deliveryMethod: deliveryMethod,
         channel: 'website',
+        payment_method: deliveryMethod === 'shipping' ? 'Cash on Delivery (COD)' : 'Pay on Store Pickup (COD)',
         payment_gateway: 'Cash on Delivery (COD)',
-        total_amount: grandTotal,
+        status: 'pending_cod',
         subtotal: subtotal,
         deliveryFee: deliveryFee,
-        items: cartItems.map((item) => {
-          const vLabel = item.variantName || (item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : null);
-          const vId = item.variantId || item.selectedVariant?.id || null;
-          const vSku = item.sku || item.selectedVariant?.sku || '';
-          const itemName = vLabel ? `${item.title || item.name} (${vLabel})` : (item.title || item.name);
-          return {
-            id: item.id,
-            product_id: item.id,
-            variant_id: vId,
-            variant_name: vLabel,
-            sku: vSku,
-            name: itemName,
-            product_name: itemName,
-            price: item.price,
-            unit_price: item.price,
-            quantity: item.quantity,
-            subtotal: item.price * item.quantity,
-            image: item.image || item.imageUrl || ''
-          };
-        })
+        total_amount: grandTotal,
+        items: cartItems.map((item) => ({
+          id: item.id,
+          product_name: item.title || item.name,
+          title: item.title || item.name,
+          variant_name: item.selectedVariant ? item.selectedVariant.name || item.selectedVariant.size : null,
+          unit_price: parseFloat(item.price || 0),
+          price: parseFloat(item.price || 0),
+          quantity: parseInt(item.quantity, 10),
+          image: item.image || item.image_url || null
+        }))
       };
 
-      // Call submitStoreApiOrder with STORE_API_KEY
+      // 2. Submit order to Supabase backend API
       const result = await submitStoreApiOrder(STORE_API_KEY, orderPayload);
 
       if (result.status === 201 || result.success) {
-        // 1. Order immediately appears in Admin POS > Online Orders
-        // 2. Automated WhatsApp confirmation is sent to customer
-        
-        // Save/Update customer profile preferences if logged in
-        if (activeCustomer) {
-          try {
-            await upsertStoreCustomerProfile({
-              phone: customerInfo.phone,
-              fullName: customerInfo.name,
-              name: customerInfo.name,
-              email: customerInfo.email,
-              address: shippingAddress.street,
-              city: shippingAddress.city,
-              state: shippingAddress.state,
-              postalCode: shippingAddress.postalCode,
-              gpsLat: shippingAddress.coordinates?.lat,
-              gpsLng: shippingAddress.coordinates?.lng
-            });
-          } catch (e) {}
+        const placedOrder = result.order || {
+          ...orderPayload,
+          orderId: result.invoice_number,
+          invoice_number: result.invoice_number,
+          createdAt: new Date().toISOString()
+        };
+
+        // 3. Save / Update customer profile in background for future 1-click checkouts
+        if (deliveryMethod === 'shipping') {
+          upsertStoreCustomerProfile({
+            phone: customerInfo.phone.trim(),
+            fullName: customerInfo.name.trim(),
+            email: customerInfo.email.trim(),
+            address: shippingAddress.street.trim(),
+            city: shippingAddress.city.trim(),
+            state: shippingAddress.state.trim(),
+            postalCode: shippingAddress.postalCode.trim(),
+            gpsLat: shippingAddress.coordinates.lat,
+            gpsLng: shippingAddress.coordinates.lng,
+          }).catch(console.warn);
         }
 
-        // Trigger Confetti celebration
-        try {
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
-          });
-        } catch (e) {}
+        // 4. Trigger celebration confetti
+        confetti({
+          particleCount: 80,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
 
-        const placedOrder = result.order;
-
+        // 5. Clear cart and notify
         clearCart();
         setIsCheckoutOpen(false);
+        showToast('Order placed successfully! Redirecting...', 'success');
 
-        // Show Success Modal with order details
         if (onOrderSuccess) {
           onOrderSuccess({
-            order: placedOrder,
-            placedOrder: placedOrder
+            ...placedOrder,
+            deliveryMethod: deliveryMethod,
+            storeAddress: settings.storeAddress || 'Main Market Road, Habra, West Bengal 743263',
+            storeName: settings.storeName || 'Ganapati Store'
           });
         }
       }
@@ -217,258 +247,454 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
         onClick={() => setIsCheckoutOpen(false)}
       />
 
-      {/* Slide-over Right Side Panel */}
+      {/* Slide-over Right Side Panel Drawer */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
         <div className="w-full sm:w-screen sm:max-w-xl bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full">
-        
-        {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between bg-white sticky top-0 z-20">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-              <Truck className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <h2 className="text-base font-black text-slate-900 tracking-tight">
-                Cash on Delivery (COD) Checkout
-              </h2>
-              <p className="text-xs text-slate-500">
-                Direct WhatsApp Dispatch &bull; Pay cash or UPI upon delivery
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsCheckoutOpen(false)}
-            className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Scrollable Form Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
           
-          {/* Step 1: Customer Contact Info */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">1</span>
-              Contact Information
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Header */}
+          <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between bg-white sticky top-0 z-20">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <Truck className="w-5 h-5 text-emerald-600" />
+              </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="e.g. Rahul Sharma"
-                    value={customerInfo.name}
-                    onChange={(e) => {
-                      setCustomerInfo({ ...customerInfo, name: e.target.value });
-                      if (errors.name) setErrors({ ...errors, name: null });
-                    }}
-                    className={`w-full pl-9 pr-3 py-2 text-xs rounded border ${
-                      errors.name ? 'border-rose-400 bg-rose-50/50' : 'border-slate-300'
-                    } focus:border-emerald-600 outline-none`}
-                  />
-                </div>
-                {errors.name && <p className="text-[10px] text-rose-500 mt-1">{errors.name}</p>}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  WhatsApp Number <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="tel"
-                    placeholder="98765 43210"
-                    maxLength={10}
-                    value={customerInfo.phone}
-                    onChange={(e) => {
-                      setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') });
-                      if (errors.phone) setErrors({ ...errors, phone: null });
-                    }}
-                    className={`w-full pl-9 pr-3 py-2 text-xs rounded border ${
-                      errors.phone ? 'border-rose-400 bg-rose-50/50' : 'border-slate-300'
-                    } focus:border-emerald-600 outline-none`}
-                  />
-                </div>
-                {errors.phone && <p className="text-[10px] text-rose-500 mt-1">{errors.phone}</p>}
+                <h2 className="text-base font-black text-slate-900 tracking-tight">
+                  Checkout & Dispatch
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Direct WhatsApp Store Dispatch &bull; Cash on Delivery
+                </p>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Email Address <span className="text-slate-400 font-normal">(Optional for tax invoice PDF)</span>
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="email"
-                  placeholder="rahul@example.com"
-                  value={customerInfo.email}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded border border-slate-300 focus:border-emerald-600 outline-none"
-                />
-              </div>
+            <button
+              onClick={() => setIsCheckoutOpen(false)}
+              className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Delivery Method Switcher Tabs */}
+          <div className="px-4 sm:px-6 pt-4 pb-2 bg-slate-50/70 border-b border-slate-200/70">
+            <div className="grid grid-cols-2 p-1 bg-slate-200/80 rounded-lg text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setDeliveryMethod('shipping')}
+                className={`py-2 px-3 rounded-md flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  deliveryMethod === 'shipping'
+                    ? 'bg-white text-emerald-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Truck className="w-4 h-4 text-emerald-600" />
+                <span>Home Delivery</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDeliveryMethod('pickup')}
+                className={`py-2 px-3 rounded-md flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  deliveryMethod === 'pickup'
+                    ? 'bg-white text-emerald-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Store className="w-4 h-4 text-emerald-600" />
+                <span>Store Pickup</span>
+              </button>
             </div>
           </div>
 
-          {/* Step 2: Delivery Method & GPS Map Location */}
-          <div className="space-y-3 pt-2">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">2</span>
-              Delivery Address & GPS Map Pin
-            </h3>
-
-            <div className="p-4 rounded bg-slate-50 border border-slate-200 space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Street Address / House / Flat <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Flat 402, Green Valley Apartments"
-                  value={shippingAddress.street}
-                  onChange={(e) => {
-                    setShippingAddress({ ...shippingAddress, street: e.target.value });
-                    if (errors.street) setErrors({ ...errors, street: null });
-                  }}
-                  className={`w-full px-3 py-2 text-xs rounded border ${
-                    errors.street ? 'border-rose-400 bg-rose-50/50' : 'border-slate-300'
-                  } bg-white focus:border-emerald-600 outline-none`}
-                />
-                {errors.street && <p className="text-[10px] text-rose-500 mt-1">{errors.street}</p>}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    City <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Mumbai"
-                    value={shippingAddress.city}
-                    onChange={(e) => {
-                      setShippingAddress({ ...shippingAddress, city: e.target.value });
-                      if (errors.city) setErrors({ ...errors, city: null });
-                    }}
-                    className="w-full px-3 py-2 text-xs rounded border border-slate-300 bg-white focus:border-emerald-600 outline-none"
-                  />
-                  {errors.city && <p className="text-[10px] text-rose-500 mt-1">{errors.city}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">State</label>
-                  <input
-                    type="text"
-                    placeholder="Maharashtra"
-                    value={shippingAddress.state}
-                    onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded border border-slate-300 bg-white focus:border-emerald-600 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Pincode <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="400001"
-                    value={shippingAddress.postalCode}
-                    onChange={(e) => {
-                      setShippingAddress({ ...shippingAddress, postalCode: e.target.value });
-                      if (errors.postalCode) setErrors({ ...errors, postalCode: null });
-                    }}
-                    className="w-full px-3 py-2 text-xs rounded border border-slate-300 bg-white focus:border-emerald-600 outline-none"
-                  />
-                  {errors.postalCode && <p className="text-[10px] text-rose-500 mt-1">{errors.postalCode}</p>}
-                </div>
-              </div>
-
-              {/* Leaflet GPS Map with Locate Me Button */}
-              <div className="pt-2 border-t border-slate-200">
-                <LocationPicker
-                  coordinates={shippingAddress.coordinates}
-                  onChange={(coords) => setShippingAddress({ ...shippingAddress, coordinates: coords })}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Method Notice: Cash on Delivery */}
-          <div className="p-3.5 rounded bg-emerald-50/80 border border-emerald-200 flex items-start gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <div className="text-xs text-emerald-950">
-              <span className="font-black uppercase tracking-wider">Payment Method: Cash on Delivery (COD)</span>
-              <p className="text-emerald-800/90 mt-0.5 leading-relaxed">
-                Pay with cash or UPI upon delivery at your doorstep. No advance card payments or passwords needed.
-              </p>
-            </div>
-          </div>
-
-          {/* Order Pricing Breakdown */}
-          <div className="bg-slate-50 p-3.5 rounded border border-slate-200 space-y-2 text-xs">
-            <div className="flex justify-between text-slate-600">
-              <span>Items Subtotal ({cartItems.reduce((a, b) => a + b.quantity, 0)})</span>
-              <span className="font-semibold text-slate-900">{settings.currency}{subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-slate-600">
-              <span>GST (18% inclusive)</span>
-              <span className="font-semibold text-slate-900">{settings.currency}{((subtotal * 0.18) / 1.18).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-slate-600">
-              <span>COD Delivery Fee</span>
-              <span className="font-bold text-emerald-700">
-                {deliveryFee === 0 ? 'FREE' : `${settings.currency}${deliveryFee.toFixed(2)}`}
-              </span>
-            </div>
-            <div className="flex justify-between font-black text-sm text-slate-900 pt-2 border-t border-slate-200">
-              <span>Total Payable on Delivery</span>
-              <span className="text-emerald-700 text-base">{settings.currency}{grandTotal.toFixed(2)}</span>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Modal Footer / Place Order Button */}
-        <div className="p-4 sm:p-5 border-t border-slate-200 bg-white sticky bottom-0 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Payable (COD):</span>
-            <div className="text-xl font-black text-slate-900">
-              {settings.currency}{grandTotal.toFixed(2)}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handlePlaceCodOrder}
-            disabled={isSubmitting}
-            className="w-full sm:w-auto flex-1 sm:max-w-xs flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-3 px-5 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98 cursor-pointer"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Placing COD Order...</span>
-              </div>
-            ) : (
+          {/* Scrollable Form Content */}
+          <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+            
+            {/* OPTION A: HOME DELIVERY */}
+            {deliveryMethod === 'shipping' && (
               <>
-                <MessageCircle className="w-4 h-4 fill-white text-emerald-600" />
-                <span>Place Cash on Delivery Order</span>
+                {/* Same-Day Delivery Guarantee Banner */}
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                    <CalendarCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1 text-xs font-black text-emerald-900 uppercase tracking-wide">
+                      <span>⚡ Delivery Expected Today</span>
+                    </div>
+                    <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                      Your order will be packed fresh and delivered to your doorstep today by <strong>{settings.storeName || 'Ganapati Store'}</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 1-Click Saved Profile Card (if available and not currently editing) */}
+                {hasSavedProfile && !isEditingAddress ? (
+                  <div className="p-4 rounded-xl border border-emerald-300 bg-white shadow-xs space-y-3 relative">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-bold">
+                          ✓
+                        </span>
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+                          Saved Delivery Address
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingAddress(true)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Change / Edit</span>
+                      </button>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/70 space-y-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900 text-sm">{customerInfo.name}</span>
+                        <span className="font-semibold text-slate-600">+91 {customerInfo.phone}</span>
+                      </div>
+                      <p className="text-slate-600 leading-relaxed pt-1">
+                        {shippingAddress.street}
+                      </p>
+                      <p className="text-slate-500 font-medium">
+                        {shippingAddress.city}, {shippingAddress.state} - <strong className="text-slate-700">{shippingAddress.postalCode}</strong>
+                      </p>
+                      {customerInfo.email && (
+                        <p className="text-slate-400 text-[11px] pt-0.5">{customerInfo.email}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Editable Contact & Address Form */
+                  <div className="space-y-4">
+                    {/* Header if editing saved address */}
+                    {hasSavedProfile && (
+                      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                        <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                          Edit Delivery Address
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingAddress(false)}
+                          className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Step 1: Customer Contact Info */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                          <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">1</span>
+                          Contact Information
+                        </h3>
+                        {!activeCustomer && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAuthOpen(true)}
+                            className="text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer"
+                          >
+                            Login with WhatsApp
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Full Name <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="e.g. Bishal Mistri"
+                              value={customerInfo.name}
+                              onChange={(e) => {
+                                setCustomerInfo({ ...customerInfo, name: e.target.value });
+                                if (errors.name) setErrors({ ...errors, name: null });
+                              }}
+                              className={`w-full pl-9 pr-3 py-2 text-xs font-medium rounded border outline-none ${
+                                errors.name ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white focus:border-emerald-500'
+                              }`}
+                            />
+                          </div>
+                          {errors.name && <span className="text-[10px] text-rose-500 font-medium">{errors.name}</span>}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            WhatsApp Number <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                              type="tel"
+                              placeholder="98765 43210"
+                              value={customerInfo.phone}
+                              onChange={(e) => {
+                                setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') });
+                                if (errors.phone) setErrors({ ...errors, phone: null });
+                              }}
+                              className={`w-full pl-9 pr-3 py-2 text-xs font-medium rounded border outline-none ${
+                                errors.phone ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white focus:border-emerald-500'
+                              }`}
+                            />
+                          </div>
+                          {errors.phone && <span className="text-[10px] text-rose-500 font-medium">{errors.phone}</span>}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Email Address <span className="text-slate-400 font-normal">(Optional for tax invoice PDF)</span>
+                        </label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="email"
+                            placeholder="e.g. bishal@example.com"
+                            value={customerInfo.email}
+                            onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                            className="w-full pl-9 pr-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Delivery Address & Map Pin */}
+                    <div className="space-y-3 pt-2">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">2</span>
+                        Delivery Address & GPS Map Pin
+                      </h3>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Street Address / House / Flat <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Flat 402, Green Valley Apartments, Station Road"
+                          value={shippingAddress.street}
+                          onChange={(e) => {
+                            setShippingAddress({ ...shippingAddress, street: e.target.value });
+                            if (errors.street) setErrors({ ...errors, street: null });
+                          }}
+                          className={`w-full px-3 py-2 text-xs font-medium rounded border outline-none ${
+                            errors.street ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white focus:border-emerald-500'
+                          }`}
+                        />
+                        {errors.street && <span className="text-[10px] text-rose-500 font-medium">{errors.street}</span>}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2.5">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            City <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Habra"
+                            value={shippingAddress.city}
+                            onChange={(e) => {
+                              setShippingAddress({ ...shippingAddress, city: e.target.value });
+                              if (errors.city) setErrors({ ...errors, city: null });
+                            }}
+                            className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">State</label>
+                          <input
+                            type="text"
+                            placeholder="West Bengal"
+                            value={shippingAddress.state}
+                            onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                            className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Pincode <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="743263"
+                            value={shippingAddress.postalCode}
+                            onChange={(e) => {
+                              setShippingAddress({ ...shippingAddress, postalCode: e.target.value.replace(/\D/g, '') });
+                              if (errors.postalCode) setErrors({ ...errors, postalCode: null });
+                            }}
+                            className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* GPS Pinpoint Map */}
+                      <div>
+                        <LocationPicker
+                          coordinates={shippingAddress.coordinates}
+                          onChange={(coords) => setShippingAddress({ ...shippingAddress, coordinates: coords })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
-          </button>
-        </div>
 
+            {/* OPTION B: STORE PICKUP */}
+            {deliveryMethod === 'pickup' && (
+              <div className="space-y-4">
+                {/* Store Pickup Notice Banner */}
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1 text-xs font-black text-amber-900 uppercase tracking-wide">
+                      <span>Pickup Time Notice</span>
+                    </div>
+                    <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                      Your pickup time will be confirmed by the store in <strong>My Orders</strong> right after placing the order.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Store Physical Location Card */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-3">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+                    <Building2 className="w-4 h-4 text-emerald-600" />
+                    <span>{settings.storeName || 'Ganapati Store'} Hub</span>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-slate-600 pl-6">
+                    <p className="font-semibold text-slate-800">
+                      {settings.storeAddress || 'Main Market Road, Habra, West Bengal 743263'}
+                    </p>
+                    <p className="text-slate-500">
+                      Store Hours: {settings.storeHours || 'Mon - Sun: 8:00 AM - 9:00 PM'}
+                    </p>
+                    <p className="text-slate-500">
+                      WhatsApp Support: {settings.whatsappNumber || '+91 9147364980'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pickup Customer Contact Info */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">1</span>
+                    Pickup Person Details
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Full Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Bishal Mistri"
+                        value={customerInfo.name}
+                        onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                        className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        WhatsApp Number <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="98765 43210"
+                        value={customerInfo.phone}
+                        onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') })}
+                        className="w-full px-3 py-2 text-xs font-medium rounded border border-slate-300 bg-white focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Method Notice */}
+            <div className="p-3.5 rounded-lg bg-emerald-50/70 border border-emerald-200/80 flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-xs">
+                <span className="font-bold text-emerald-950 block">
+                  {deliveryMethod === 'shipping' ? 'Payment Method: Cash on Delivery (COD)' : 'Payment Method: Pay at Store on Pickup'}
+                </span>
+                <span className="text-emerald-800 text-[11px] leading-relaxed">
+                  Pay with cash or UPI upon {deliveryMethod === 'shipping' ? 'doorstep delivery' : 'store pickup'}. 100% verified & secure.
+                </span>
+              </div>
+            </div>
+
+            {/* Order Items & Cost Breakdown */}
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 text-xs space-y-2">
+              <div className="flex justify-between text-slate-600">
+                <span>Items Subtotal ({cartItems.length})</span>
+                <span className="font-semibold text-slate-900">{settings.currency}{subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>GST (18% inclusive)</span>
+                <span className="font-semibold text-slate-900">{settings.currency}{((subtotal * 0.18) / 1.18).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>{deliveryMethod === 'shipping' ? 'Delivery Fee' : 'Store Pickup'}</span>
+                <span className="font-bold text-emerald-700">
+                  {deliveryFee === 0 ? 'FREE' : `${settings.currency}${deliveryFee.toFixed(2)}`}
+                </span>
+              </div>
+              <div className="flex justify-between font-black text-sm text-slate-900 pt-2 border-t border-slate-200">
+                <span>Total Payable ({deliveryMethod === 'shipping' ? 'COD' : 'Pickup'})</span>
+                <span className="text-emerald-700 text-base">{settings.currency}{grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Drawer Sticky Footer / Place Order Button */}
+          <div className="p-4 sm:p-5 border-t border-slate-200 bg-white sticky bottom-0 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                Total Payable ({deliveryMethod === 'shipping' ? 'COD' : 'Pickup'}):
+              </span>
+              <div className="text-xl font-black text-slate-900">
+                {settings.currency}{grandTotal.toFixed(2)}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePlaceCodOrder}
+              disabled={isSubmitting}
+              className="w-full sm:w-auto flex-1 sm:max-w-xs flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-5 rounded text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Placing Order...</span>
+                </div>
+              ) : (
+                <>
+                  <MessageCircle className="w-4 h-4 fill-white text-emerald-600" />
+                  <span>Place Cash on Delivery Order</span>
+                </>
+              )}
+            </button>
+          </div>
+
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };

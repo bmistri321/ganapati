@@ -1,28 +1,42 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ArrowRight, CheckCircle, Smartphone } from 'lucide-react';
-import { requestStoreWhatsAppOtp, verifyStoreWhatsAppOtp } from '../services/supabase';
+import { X, ArrowRight, CheckCircle, Smartphone, User, MapPin, Mail, Home, Navigation, Sparkles } from 'lucide-react';
+import { requestStoreWhatsAppOtp, verifyStoreWhatsAppOtp, upsertStoreCustomerProfile } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { LocationPicker } from './LocationPicker';
 
 export const WhatsAppLoginModal = () => {
   const { isAuthOpen, setIsAuthOpen, setCurrentCustomer } = useAuth();
   const { showToast } = useToast();
 
   const [phone, setPhone] = useState('');
-  const [otpStep, setOtpStep] = useState(false);
+  // step: 'phone' | 'otp' | 'onboarding'
+  const [step, setStep] = useState('phone');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(300);
+
+  // First-time onboarding state
+  const [onboardingData, setOnboardingData] = useState({
+    fullName: '',
+    street: '',
+    city: 'Habra',
+    state: 'West Bengal',
+    postalCode: '743263',
+    email: '',
+    coordinates: { lat: 22.8291, lng: 88.6148 }
+  });
+  const [onboardingErrors, setOnboardingErrors] = useState({});
 
   const inputRefs = useRef([]);
 
   useEffect(() => {
     let timer;
-    if (otpStep && countdown > 0) {
+    if (step === 'otp' && countdown > 0) {
       timer = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000);
     }
     return () => clearInterval(timer);
-  }, [otpStep, countdown]);
+  }, [step, countdown]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -36,7 +50,7 @@ export const WhatsAppLoginModal = () => {
 
   const closeLoginModal = () => {
     setIsAuthOpen(false);
-    setOtpStep(false);
+    setStep('phone');
     setOtpDigits(['', '', '', '', '', '']);
   };
 
@@ -46,7 +60,7 @@ export const WhatsAppLoginModal = () => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // Step A: Send OTP to customer's WhatsApp
+  // Step 1: Send OTP to customer's WhatsApp
   const handleSendOtp = async (e) => {
     e?.preventDefault();
     const cleanPhone = phone.replace(/\D/g, '');
@@ -58,7 +72,7 @@ export const WhatsAppLoginModal = () => {
     setLoading(true);
     try {
       await requestStoreWhatsAppOtp(cleanPhone);
-      setOtpStep(true);
+      setStep('otp');
       setCountdown(300);
       showToast('6-digit OTP sent to your WhatsApp!', 'success');
       setTimeout(() => {
@@ -118,10 +132,37 @@ export const WhatsAppLoginModal = () => {
     try {
       const cleanPhone = phone.replace(/\D/g, '');
       const res = await verifyStoreWhatsAppOtp(cleanPhone, codeToVerify);
-      localStorage.setItem('customer_session', JSON.stringify(res.customer));
-      setCurrentCustomer(res.customer);
-      showToast('WhatsApp verification successful!', 'success');
-      closeLoginModal();
+      
+      const loggedInCust = res.customer;
+      localStorage.setItem('customer_session', JSON.stringify(loggedInCust));
+      setCurrentCustomer(loggedInCust);
+
+      // Check if user is a first-time user without saved name or address
+      const isFirstTime = !loggedInCust?.fullName || 
+        loggedInCust?.fullName === 'Verified Customer' || 
+        !loggedInCust?.address ||
+        !loggedInCust?.shippingAddress?.street;
+
+      if (isFirstTime) {
+        // Switch to Step 3: First-Time Onboarding
+        setOnboardingData((prev) => ({
+          ...prev,
+          fullName: loggedInCust.fullName !== 'Verified Customer' ? (loggedInCust.fullName || '') : '',
+          email: loggedInCust.email || '',
+          street: loggedInCust.address || loggedInCust.shippingAddress?.street || '',
+          city: loggedInCust.city || 'Habra',
+          postalCode: loggedInCust.postalCode || '743263',
+          coordinates: {
+            lat: loggedInCust.gpsLat || loggedInCust.shippingAddress?.coordinates?.lat || 22.8291,
+            lng: loggedInCust.gpsLng || loggedInCust.shippingAddress?.coordinates?.lng || 88.6148
+          }
+        }));
+        setStep('onboarding');
+        showToast('OTP verified! Please set up your delivery details.', 'info');
+      } else {
+        showToast(`Welcome back, ${loggedInCust.fullName || 'Customer'}!`, 'success');
+        closeLoginModal();
+      }
     } catch (err) {
       showToast('Invalid OTP code. Please check your WhatsApp.', 'error');
     } finally {
@@ -129,7 +170,7 @@ export const WhatsAppLoginModal = () => {
     }
   };
 
-  // Step B: Manual click verify
+  // Step 2: Manual click verify
   const handleVerifyOtp = async (e) => {
     e?.preventDefault();
     const fullOtp = otpDigits.join('');
@@ -138,6 +179,51 @@ export const WhatsAppLoginModal = () => {
       return;
     }
     await verifyCode(fullOtp);
+  };
+
+  // Step 3: Save First-Time Customer Onboarding Details
+  const handleSaveOnboarding = async (e) => {
+    e?.preventDefault();
+    const errs = {};
+    if (!onboardingData.fullName.trim()) errs.fullName = 'Full Name is required';
+    if (!onboardingData.street.trim()) errs.street = 'Delivery address is required';
+    if (!onboardingData.city.trim()) errs.city = 'City is required';
+    if (!onboardingData.postalCode.trim()) errs.postalCode = 'Pincode is required';
+
+    if (Object.keys(errs).length > 0) {
+      setOnboardingErrors(errs);
+      showToast('Please fill in all required delivery details', 'warning');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const cleanPhone = phone.replace(/\D/g, '');
+      const saved = await upsertStoreCustomerProfile({
+        phone: cleanPhone,
+        fullName: onboardingData.fullName.trim(),
+        name: onboardingData.fullName.trim(),
+        email: onboardingData.email.trim(),
+        address: onboardingData.street.trim(),
+        city: onboardingData.city.trim(),
+        state: onboardingData.state.trim(),
+        postalCode: onboardingData.postalCode.trim(),
+        gpsLat: onboardingData.coordinates.lat,
+        gpsLng: onboardingData.coordinates.lng,
+      });
+
+      if (saved && saved.customer) {
+        localStorage.setItem('customer_session', JSON.stringify(saved.customer));
+        setCurrentCustomer(saved.customer);
+      }
+
+      showToast('Profile & delivery address saved! Ready for 1-click checkout.', 'success');
+      closeLoginModal();
+    } catch (err) {
+      showToast('Failed to save profile: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -149,35 +235,39 @@ export const WhatsAppLoginModal = () => {
       />
 
       {/* Mobile-First Bottom Sheet / Modern Modal Card */}
-      <div className="relative bg-white rounded-t-[32px] sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden z-10 animate-slide-up border-t sm:border border-slate-200/90 p-6 sm:p-8 pb-8 flex flex-col justify-between max-h-[90vh]">
+      <div className={`relative bg-white rounded-t-[32px] sm:rounded-2xl shadow-2xl ${step === 'onboarding' ? 'max-w-xl' : 'max-w-md'} w-full overflow-hidden z-10 animate-slide-up border-t sm:border border-slate-200/90 p-5 sm:p-7 flex flex-col justify-between max-h-[92vh]`}>
         
         {/* Mobile Pull/Drag Handle */}
-        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-5 sm:hidden" />
+        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-4 sm:hidden" />
 
         {/* Close Button */}
         <button
           onClick={closeLoginModal}
-          className="absolute top-5 right-5 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {!otpStep ? (
+        {step === 'phone' && (
           /* Step 1: Mobile Phone Number Input */
           <div className="space-y-6 pt-2 sm:pt-0">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                Login
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-100 mb-2">
+                <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span>Instant 1-Click WhatsApp Login</span>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                Welcome to Ganapati Store
               </h2>
-              <p className="text-xs text-slate-500 mt-1.5">
+              <p className="text-xs text-slate-500 mt-1">
                 Enter your WhatsApp number to receive an instant 6-digit verification code.
               </p>
             </div>
 
             <form onSubmit={handleSendOtp} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Mobile Number
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  WhatsApp Mobile Number
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3.5 text-sm font-semibold text-slate-500 select-none">
@@ -198,32 +288,34 @@ export const WhatsAppLoginModal = () => {
               <button
                 type="submit"
                 disabled={loading || phone.length < 10}
-                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98"
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Continue</span>
+                    <span>Send Verification Code</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
           </div>
-        ) : (
-          /* Step 2: 6-Digit OTP Soft-Box Verification (Exact Match to Figma Concept) */
-          <div className="space-y-7 pt-2 sm:pt-0">
+        )}
+
+        {step === 'otp' && (
+          /* Step 2: 6-Digit OTP Verification */
+          <div className="space-y-6 pt-2 sm:pt-0">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                Login
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                Enter WhatsApp OTP
               </h2>
-              <p className="text-xs text-slate-500 mt-1.5">
-                Enter the 6-digit code sent to <strong className="text-slate-800">+91 {phone}</strong>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter the 6-digit code sent to <strong className="text-slate-900 font-bold">+91 {phone}</strong>
               </p>
             </div>
 
-            <form onSubmit={handleVerifyOtp} className="space-y-6">
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
               {/* 6 Soft Light-Gray Boxes */}
               <div className="flex justify-between gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
                 {otpDigits.map((digit, index) => (
@@ -236,9 +328,9 @@ export const WhatsAppLoginModal = () => {
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e.key)}
-                    className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-xl font-semibold rounded-xl transition-all outline-none ${
+                    className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-xl font-bold rounded-xl transition-all outline-none ${
                       digit 
-                        ? 'bg-white border-2 border-slate-900 text-slate-900 shadow-xs' 
+                        ? 'bg-white border-2 border-emerald-600 text-slate-900 shadow-xs' 
                         : 'bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white text-slate-900'
                     }`}
                   />
@@ -254,7 +346,7 @@ export const WhatsAppLoginModal = () => {
                   type="button"
                   disabled={countdown > 0}
                   onClick={handleSendOtp}
-                  className="font-semibold text-slate-900 hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+                  className="font-bold text-emerald-700 hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   Resend OTP
                 </button>
@@ -263,14 +355,161 @@ export const WhatsAppLoginModal = () => {
               <button
                 type="submit"
                 disabled={loading || otpDigits.join('').length < 6}
-                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98"
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4" />
-                    <span>Verify & Continue</span>
+                    <span>Verify Code</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {step === 'onboarding' && (
+          /* Step 3: First-Time User Profile & Address Setup */
+          <div className="space-y-4 pt-1 sm:pt-0 overflow-y-auto max-h-[78vh] pr-1">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold mb-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>WhatsApp Verified (+91 {phone})</span>
+              </div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                Set Up Your Delivery Profile
+              </h2>
+              <p className="text-xs text-slate-500">
+                Please enter your delivery details once. Next time, enjoy 1-click checkout!
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveOnboarding} className="space-y-3.5">
+              {/* Full Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Bishal Mistri"
+                    value={onboardingData.fullName}
+                    onChange={(e) => {
+                      setOnboardingData({ ...onboardingData, fullName: e.target.value });
+                      if (onboardingErrors.fullName) setOnboardingErrors({ ...onboardingErrors, fullName: null });
+                    }}
+                    className={`w-full pl-9 pr-3 py-2.5 text-xs font-medium rounded-lg border outline-none ${
+                      onboardingErrors.fullName ? 'border-rose-400 bg-rose-50/40' : 'border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500'
+                    }`}
+                  />
+                </div>
+                {onboardingErrors.fullName && (
+                  <span className="text-[10px] text-rose-500 font-medium">{onboardingErrors.fullName}</span>
+                )}
+              </div>
+
+              {/* Email (Optional) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Email Address <span className="text-slate-400 font-normal">(Optional for invoice PDF)</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="email"
+                    placeholder="e.g. name@example.com"
+                    value={onboardingData.email}
+                    onChange={(e) => setOnboardingData({ ...onboardingData, email: e.target.value })}
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Delivery Address */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Delivery Address / House / Flat <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Home className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Flat 402, Green Valley Apartments, Station Road"
+                    value={onboardingData.street}
+                    onChange={(e) => {
+                      setOnboardingData({ ...onboardingData, street: e.target.value });
+                      if (onboardingErrors.street) setOnboardingErrors({ ...onboardingErrors, street: null });
+                    }}
+                    className={`w-full pl-9 pr-3 py-2 text-xs font-medium rounded-lg border outline-none ${
+                      onboardingErrors.street ? 'border-rose-400 bg-rose-50/40' : 'border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500'
+                    }`}
+                  />
+                </div>
+                {onboardingErrors.street && (
+                  <span className="text-[10px] text-rose-500 font-medium">{onboardingErrors.street}</span>
+                )}
+              </div>
+
+              {/* City & Pincode */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    City <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Habra / Kolkata"
+                    value={onboardingData.city}
+                    onChange={(e) => {
+                      setOnboardingData({ ...onboardingData, city: e.target.value });
+                      if (onboardingErrors.city) setOnboardingErrors({ ...onboardingErrors, city: null });
+                    }}
+                    className="w-full px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Pincode <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 743263"
+                    value={onboardingData.postalCode}
+                    onChange={(e) => {
+                      setOnboardingData({ ...onboardingData, postalCode: e.target.value.replace(/\D/g, '') });
+                      if (onboardingErrors.postalCode) setOnboardingErrors({ ...onboardingErrors, postalCode: null });
+                    }}
+                    className="w-full px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* GPS Location Pin */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  GPS Map Delivery Pin
+                </label>
+                <LocationPicker
+                  coordinates={onboardingData.coordinates}
+                  onChange={(coords) => setOnboardingData({ ...onboardingData, coordinates: coords })}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98 cursor-pointer mt-2"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Save Profile & Start Shopping</span>
                   </>
                 )}
               </button>
