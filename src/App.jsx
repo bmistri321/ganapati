@@ -271,13 +271,15 @@ export function App() {
       ) : (
         <>
           {/* Store Banner Image */}
-          <section className="w-full border-b border-slate-200/80">
-            <img
-              src="https://res.cloudinary.com/ovj5ffsn/image/upload/v1788721833/freepik-flat-professional-supermarket-green-facebook-header-20260906190851o7W2.png"
-              alt="Ganapati Store — Fresh Groceries & Daily Essentials"
-              className="w-full h-auto block"
-              loading="eager"
-            />
+          <section className="w-full border-b border-slate-200/80 bg-white">
+            <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3">
+              <img
+                src="https://res.cloudinary.com/ovj5ffsn/image/upload/v1788721833/freepik-flat-professional-supermarket-green-facebook-header-20260906190851o7W2.png"
+                alt="Ganapati Store — Fresh Groceries & Daily Essentials"
+                className="w-full h-auto block rounded-xl"
+                loading="eager"
+              />
+            </div>
           </section>
 
           {/* Catalog Main 2-Column Split Layout Area (Mobile & Desktop) */}
