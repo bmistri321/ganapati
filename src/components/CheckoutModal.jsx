@@ -356,14 +356,14 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
           <div className="px-4 sm:px-5 pb-6 overflow-y-auto space-y-4 flex-1">
             
             {/* Delivery Method Switcher */}
-            <div className="p-1 bg-[#F4F5F7] rounded-2xl grid grid-cols-2 text-xs font-bold">
+            <div className="grid grid-cols-2 gap-2 text-xs font-bold pb-4 border-b border-slate-100">
               <button
                 type="button"
                 onClick={() => setDeliveryMethod('shipping')}
                 className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   deliveryMethod === 'shipping'
                     ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
                 <Truck className="w-4 h-4" />
@@ -376,7 +376,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                 className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   deliveryMethod === 'pickup'
                     ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
                 <Store className="w-4 h-4" />
@@ -388,7 +388,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             {deliveryMethod === 'shipping' && (
               <>
                 {/* Same-Day Delivery Guarantee Banner */}
-                <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-3">
+                <div className="flex items-start gap-3 pb-4 border-b border-slate-100">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                     <CalendarCheck className="w-4 h-4" />
                   </div>
@@ -404,15 +404,15 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
                 {/* Saved Delivery Address Card */}
                 {shippingAddress.street ? (
-                  <div className="p-4 rounded-2xl bg-[#F4F5F7] space-y-2.5 relative">
+                  <div className="space-y-2.5 pb-4 border-b border-slate-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-800 shadow-xs">
-                          <Check className="w-3 h-3 text-slate-800 stroke-[3]" />
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-900">
+                          <Check className="w-3.5 h-3.5 text-slate-900 stroke-[3]" />
                           <span>Delivery Address</span>
                         </span>
                         {shippingAddress.tag && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 text-slate-700">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
                             {shippingAddress.tag}
                           </span>
                         )}
@@ -421,13 +421,13 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                       <button
                         type="button"
                         onClick={() => openAddressBook('address', 'list')}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-white hover:bg-slate-100 text-slate-900 shadow-xs transition-all cursor-pointer active:scale-95"
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-900 transition-all cursor-pointer active:scale-95"
                       >
                         <span>Change</span>
                       </button>
                     </div>
 
-                    <div className="space-y-1 text-xs pt-1">
+                    <div className="space-y-1 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-900 text-sm">{customerInfo.name || 'Recipient'}</span>
                         <span className="font-semibold text-slate-600 font-mono">{customerInfo.phone ? `+91 ${customerInfo.phone.replace(/\D/g, '').slice(-10)}` : ''}</span>
@@ -444,8 +444,8 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-5 rounded-2xl bg-[#F4F5F7] text-center space-y-2.5">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center mx-auto">
+                  <div className="text-center py-4 space-y-2.5 pb-4 border-b border-slate-100">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mx-auto">
                       <MapPin className="w-5 h-5" />
                     </div>
                     <div>
@@ -469,7 +469,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             {deliveryMethod === 'pickup' && (
               <div className="space-y-4">
                 {/* Store Pickup Notice Banner */}
-                <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-3">
+                <div className="flex items-start gap-3 pb-4 border-b border-slate-100">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                     <Clock className="w-4 h-4" />
                   </div>
@@ -484,7 +484,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                 </div>
 
                 {/* Store Physical Location Card */}
-                <div className="p-4 rounded-2xl bg-[#F4F5F7] space-y-2.5">
+                <div className="space-y-2 pb-4 border-b border-slate-100">
                   <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                     <Building2 className="w-4 h-4 text-slate-900" />
                     <span>{settings.storeName || 'Ganapati Store'} Hub</span>
@@ -504,7 +504,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                 </div>
 
                 {/* Pickup Customer Contact Info */}
-                <div className="space-y-3">
+                <div className="space-y-3 pb-4 border-b border-slate-100">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
                       <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px]">1</span>
@@ -515,7 +515,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                       <button
                         type="button"
                         onClick={() => setIsEditingPickupPerson(true)}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F4F5F7] hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer active:scale-95"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer active:scale-95"
                       >
                         <Edit3 className="w-3 h-3 text-slate-600" />
                         <span>Edit</span>
@@ -524,11 +524,11 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                   </div>
 
                   {customerInfo.name && !isEditingPickupPerson ? (
-                    <div className="bg-[#F4F5F7] p-3.5 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 text-sm">{customerInfo.name}</span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold shadow-xs">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 text-[10px] font-bold">
                             <Check className="w-3 h-3 text-slate-800" />
                             <span>Profile Contact</span>
                           </span>
@@ -560,7 +560,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                             placeholder="e.g. Bishal Mistri"
                             value={customerInfo.name}
                             onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-white border border-slate-200 focus:border-slate-400 outline-none transition-all"
                           />
                         </div>
 
@@ -573,7 +573,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                             placeholder="98765 43210"
                             value={customerInfo.phone}
                             onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/\D/g, '') })}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border-0 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none transition-all"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-white border border-slate-200 focus:border-slate-400 outline-none transition-all"
                           />
                         </div>
                       </div>
@@ -584,10 +584,10 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
             )}
 
             {/* Order Items & Cost Breakdown */}
-            <div className="bg-[#F4F5F7] p-3.5 rounded-2xl text-xs space-y-2">
+            <div className="text-xs space-y-2 pb-4 border-b border-slate-100">
               <div className="flex justify-between text-slate-600">
                 <span>Items Subtotal ({cartItems.length})</span>
-                <span className="font-semibold text-slate-900">{settings.currency}{subtotal.toFixed(2)}</span>
+                <span className="font-semibold text-slate-900 font-mono">{settings.currency}{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>{deliveryMethod === 'shipping' ? 'Delivery Fee' : 'Store Pickup'}</span>
@@ -595,14 +595,14 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
                   {deliveryFee === 0 ? 'FREE' : `${settings.currency}${deliveryFee.toFixed(2)}`}
                 </span>
               </div>
-              <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-200/60">
+              <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-100">
                 <span>Total Payable ({deliveryMethod === 'shipping' ? 'COD' : 'Pickup'})</span>
-                <span className="text-slate-900 text-base">{settings.currency}{grandTotal.toFixed(2)}</span>
+                <span className="text-slate-900 text-base font-black font-mono">{settings.currency}{grandTotal.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Payment Method Notice (Just before Place Order) */}
-            <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 pb-2">
               <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <span className="font-bold text-slate-900 block">
