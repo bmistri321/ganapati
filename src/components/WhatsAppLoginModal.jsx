@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ArrowRight, CheckCircle, Smartphone, User, MapPin, Mail, Home, Navigation } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, Smartphone, User, MapPin, Mail, Home, Briefcase, Navigation, Save } from 'lucide-react';
 import { requestStoreWhatsAppOtp, verifyStoreWhatsAppOtp, upsertStoreCustomerProfile } from '../services/supabase';
+import { addressService } from '../services/addressService';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { LocationPicker } from './LocationPicker';
@@ -18,12 +19,14 @@ export const WhatsAppLoginModal = () => {
 
   // First-time onboarding state
   const [onboardingData, setOnboardingData] = useState({
+    tag: 'Home',
     fullName: '',
     street: '',
     city: 'Habra / Ashoknagar',
     state: 'West Bengal',
     postalCode: '743263',
     email: '',
+    isDefault: true,
     coordinates: { lat: 22.8291, lng: 88.6148 }
   });
   const [onboardingErrors, setOnboardingErrors] = useState({});
@@ -151,6 +154,7 @@ export const WhatsAppLoginModal = () => {
           email: loggedInCust.email || '',
           street: loggedInCust.address || loggedInCust.shippingAddress?.street || '',
           city: loggedInCust.city || 'Habra / Ashoknagar',
+          state: loggedInCust.state || 'West Bengal',
           postalCode: loggedInCust.postalCode || '743263',
           coordinates: {
             lat: loggedInCust.gpsLat || loggedInCust.shippingAddress?.coordinates?.lat || 22.8291,
@@ -184,21 +188,40 @@ export const WhatsAppLoginModal = () => {
   // Step 3: Save First-Time Customer Onboarding Details
   const handleSaveOnboarding = async (e) => {
     e?.preventDefault();
-    const errs = {};
-    if (!onboardingData.fullName.trim()) errs.fullName = 'Full Name is required';
-    if (!onboardingData.street.trim()) errs.street = 'Delivery address is required';
-    if (!onboardingData.city.trim()) errs.city = 'City is required';
-    if (!onboardingData.postalCode.trim()) errs.postalCode = 'Pincode is required';
-
-    if (Object.keys(errs).length > 0) {
-      setOnboardingErrors(errs);
-      showToast('Please fill in all required delivery details', 'warning');
+    if (!onboardingData.fullName.trim()) {
+      showToast('Please enter your full name', 'warning');
+      return;
+    }
+    if (!onboardingData.street.trim()) {
+      showToast('Please enter your delivery street address', 'warning');
       return;
     }
 
     setLoading(true);
     try {
       const cleanPhone = phone.replace(/\D/g, '');
+      
+      // Save address via addressService
+      const addressPayload = {
+        label: onboardingData.tag || 'Home',
+        tag: onboardingData.tag || 'Home',
+        recipientName: onboardingData.fullName.trim(),
+        name: onboardingData.fullName.trim(),
+        phone: cleanPhone,
+        street: onboardingData.street.trim(),
+        address: onboardingData.street.trim(),
+        city: onboardingData.city.trim() || 'Habra / Ashoknagar',
+        state: onboardingData.state.trim() || 'West Bengal',
+        pincode: onboardingData.postalCode.trim() || '743263',
+        postalCode: onboardingData.postalCode.trim() || '743263',
+        lat: onboardingData.coordinates.lat,
+        lng: onboardingData.coordinates.lng,
+        gpsCoords: onboardingData.coordinates,
+        isDefault: true
+      };
+
+      await addressService.saveAddress(cleanPhone, addressPayload);
+
       const saved = await upsertStoreCustomerProfile({
         phone: cleanPhone,
         fullName: onboardingData.fullName.trim(),
@@ -246,10 +269,10 @@ export const WhatsAppLoginModal = () => {
               </div>
               <div>
                 <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                  {step === 'onboarding' ? 'Customer Profile' : 'WhatsApp Login'}
+                  {step === 'onboarding' ? 'Add New Address' : 'WhatsApp Login'}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  {step === 'otp' ? 'Enter 6-digit verification code' : step === 'onboarding' ? 'Complete your delivery details' : 'Direct 1-Click Verification'}
+                  {step === 'otp' ? 'Enter 6-digit verification code' : step === 'onboarding' ? 'Set up your delivery profile' : 'Direct 1-Click Verification'}
                 </p>
               </div>
             </div>
@@ -263,258 +286,290 @@ export const WhatsAppLoginModal = () => {
             </button>
           </div>
 
-          {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-7 flex flex-col justify-center">
-
-        {step === 'phone' && (
-          /* Step 1: Mobile Phone Number Input */
-          <div className="w-full space-y-6 text-left my-auto">
-            <div className="space-y-1.5">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                Welcome to Ganapati Store
-              </h2>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Enter your WhatsApp number to receive an instant <br />
-                6-digit verification code.
-              </p>
-            </div>
-
-            <form onSubmit={handleSendOtp} className="space-y-4 text-left">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 text-left">
-                  WhatsApp Mobile Number
-                </label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3.5 text-sm font-semibold text-slate-500 select-none">
-                    +91
-                  </span>
-                  <input
-                    type="tel"
-                    maxLength={10}
-                    placeholder="98765 43210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                    className="w-full pl-14 pr-3.5 py-3 text-sm font-semibold bg-[#F4F5F7] hover:bg-[#EAECEF] focus:bg-white rounded-xl border border-transparent focus:border-slate-400 outline-none transition-all text-left"
-                    autoFocus
-                  />
+          {/* Body Content */}
+          <div className="p-4 sm:p-5 overflow-y-auto flex-1 flex flex-col">
+            
+            {step === 'phone' && (
+              /* Step 1: Phone Entry */
+              <div className="space-y-5 my-auto">
+                <div className="text-center space-y-1">
+                  <h3 className="text-lg font-bold text-slate-900">Enter WhatsApp Number</h3>
+                  <p className="text-xs text-slate-500">
+                    We will send a 6-digit instant verification code
+                  </p>
                 </div>
+
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Mobile Phone Number
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 font-semibold text-xs border-r border-slate-200 pr-2.5 my-2">
+                        +91
+                      </div>
+                      <input
+                        type="tel"
+                        placeholder="98765 43210"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="w-full pl-16 pr-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all tracking-wider"
+                        autoFocus
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || phone.length < 10}
+                    className="w-full py-3.5 px-4 bg-slate-900 hover:bg-black disabled:bg-slate-300 text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 uppercase tracking-wider"
+                  >
+                    {loading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>Get WhatsApp OTP</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
               </div>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading || phone.length < 10}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98 cursor-pointer"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Send Verification Code</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {step === 'otp' && (
-          /* Step 2: 6-Digit OTP Verification */
-          <div className="w-full space-y-6 text-left my-auto">
-            <div className="space-y-1.5">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                Enter WhatsApp OTP
-              </h2>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Enter the 6-digit code sent to <strong className="text-slate-900 font-bold">+91 {phone}</strong>
-              </p>
-            </div>
-
-            <form onSubmit={handleVerifyOtp} className="space-y-5 text-left">
-              {/* 6 Soft Light-Gray Boxes */}
-              <div className="flex justify-between gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
-                {otpDigits.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(el) => (inputRefs.current[index] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(index, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e.key)}
-                    className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-xl font-bold rounded-xl transition-all outline-none ${
-                      digit 
-                        ? 'bg-white border-2 border-emerald-600 text-slate-900 shadow-xs' 
-                        : 'bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white text-slate-900'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {/* Countdown & Resend Option */}
-              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                <span>
-                  Resend in <strong className="text-slate-800 font-mono">{formatMinutes(countdown)}</strong>
-                </span>
-                <button
-                  type="button"
-                  disabled={countdown > 0}
-                  onClick={handleSendOtp}
-                  className="font-bold text-emerald-700 hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  Resend OTP
-                </button>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || otpDigits.join('').length < 6}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98 cursor-pointer"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Verify Code</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {step === 'onboarding' && (
-          /* Step 3: First-Time User Profile & Address Setup */
-          <div className="space-y-5 my-auto pb-4">
-            <form onSubmit={handleSaveOnboarding} className="space-y-4">
-              {/* Full Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={onboardingData.fullName}
-                    onChange={(e) => {
-                      setOnboardingData({ ...onboardingData, fullName: e.target.value });
-                      if (onboardingErrors.fullName) setOnboardingErrors({ ...onboardingErrors, fullName: null });
-                    }}
-                    className={`w-full pl-9 pr-3 py-2.5 text-xs font-medium rounded-lg border outline-none ${
-                      onboardingErrors.fullName ? 'border-rose-400 bg-rose-50/40' : 'border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500'
-                    }`}
-                  />
+            {step === 'otp' && (
+              /* Step 2: OTP Verification */
+              <div className="space-y-5 my-auto">
+                <div className="text-center space-y-1">
+                  <h3 className="text-lg font-bold text-slate-900">Verify WhatsApp OTP</h3>
+                  <p className="text-xs text-slate-500">
+                    Code sent to <span className="font-semibold text-slate-800">+91 {phone}</span>
+                  </p>
                 </div>
-                {onboardingErrors.fullName && (
-                  <span className="text-[10px] text-rose-500 font-medium">{onboardingErrors.fullName}</span>
-                )}
-              </div>
 
-              {/* Email (Optional) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="email"
-                    placeholder="e.g. name@example.com"
-                    value={onboardingData.email}
-                    onChange={(e) => setOnboardingData({ ...onboardingData, email: e.target.value })}
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500 outline-none"
-                  />
-                </div>
-              </div>
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
+                    {otpDigits.map((digit, index) => (
+                      <input
+                        key={index}
+                        ref={(el) => (inputRefs.current[index] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(index, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        className="w-11 h-12 text-center font-bold text-base rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                      />
+                    ))}
+                  </div>
 
-              {/* Delivery Address */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Delivery Address / House / Flat <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Home className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Flat 402, Green Valley Apartments, Station Road"
-                    value={onboardingData.street}
-                    onChange={(e) => {
-                      setOnboardingData({ ...onboardingData, street: e.target.value });
-                      if (onboardingErrors.street) setOnboardingErrors({ ...onboardingErrors, street: null });
-                    }}
-                    className={`w-full pl-9 pr-3 py-2 text-xs font-medium rounded-lg border outline-none ${
-                      onboardingErrors.street ? 'border-rose-400 bg-rose-50/40' : 'border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500'
-                    }`}
-                  />
-                </div>
-                {onboardingErrors.street && (
-                  <span className="text-[10px] text-rose-500 font-medium">{onboardingErrors.street}</span>
-                )}
-              </div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                    <span>
+                      Resend in <span className="font-semibold font-mono text-slate-800">{formatMinutes(countdown)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setStep('phone')}
+                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline underline-offset-2 cursor-pointer"
+                    >
+                      Change Number
+                    </button>
+                  </div>
 
-              {/* City & Pincode */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    City <span className="text-rose-500">*</span>
+                  <button
+                    type="submit"
+                    disabled={loading || otpDigits.join('').length < 6}
+                    className="w-full py-3.5 px-4 bg-slate-900 hover:bg-black disabled:bg-slate-300 text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 uppercase tracking-wider"
+                  >
+                    {loading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Verify Code</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {step === 'onboarding' && (
+              /* Step 3: First-Time User Profile & Address Setup (Matches Address Editor UI exactly) */
+              <form onSubmit={handleSaveOnboarding} className="space-y-4 animate-fade-in pb-4">
+                
+                {/* Address Type Selector */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Address Type
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Habra / Ashoknagar"
-                    value={onboardingData.city}
-                    onChange={(e) => {
-                      setOnboardingData({ ...onboardingData, city: e.target.value });
-                      if (onboardingErrors.city) setOnboardingErrors({ ...onboardingErrors, city: null });
-                    }}
-                    className="w-full px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500 outline-none"
-                  />
+                  <div className="flex items-center gap-2">
+                    {['Home', 'Work', 'Other'].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setOnboardingData({ ...onboardingData, tag })}
+                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          onboardingData.tag === tag
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : 'bg-[#F4F5F7] text-slate-700 border-transparent hover:bg-slate-200/80'
+                        }`}
+                      >
+                        {tag === 'Home' && <Home className="w-3.5 h-3.5" />}
+                        {tag === 'Work' && <Briefcase className="w-3.5 h-3.5" />}
+                        {tag === 'Other' && <MapPin className="w-3.5 h-3.5" />}
+                        <span>{tag}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Pincode <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 743263"
-                    value={onboardingData.postalCode}
-                    onChange={(e) => {
-                      setOnboardingData({ ...onboardingData, postalCode: e.target.value.replace(/\D/g, '') });
-                      if (onboardingErrors.postalCode) setOnboardingErrors({ ...onboardingErrors, postalCode: null });
-                    }}
-                    className="w-full px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-500 outline-none"
-                  />
+
+                {/* Recipient Details */}
+                <div className="space-y-3 pt-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Bishal Mistri"
+                      value={onboardingData.fullName}
+                      onChange={(e) => setOnboardingData({ ...onboardingData, fullName: e.target.value })}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        WhatsApp Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={phone ? `+91 ${phone}` : '+91 98765 43210'}
+                        disabled
+                        className="w-full px-3.5 py-2.5 text-xs font-mono font-medium rounded-xl bg-slate-100 text-slate-500 cursor-not-allowed border border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="oliva@example.com"
+                        value={onboardingData.email}
+                        onChange={(e) => setOnboardingData({ ...onboardingData, email: e.target.value })}
+                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* GPS Location Pin */}
-              <div className="pt-2">
-                <LocationPicker
-                  coordinates={onboardingData.coordinates}
-                  onChange={(coords) => setOnboardingData({ ...onboardingData, coordinates: coords })}
-                />
-              </div>
+                {/* Delivery Address & GPS Details */}
+                <div className="space-y-3 pt-3 border-t border-slate-100">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Street Address / Flat / Building *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Station Road, 4no Gali, Near City Hospital"
+                      value={onboardingData.street}
+                      onChange={(e) => setOnboardingData({ ...onboardingData, street: e.target.value })}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                      required
+                    />
+                  </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-98 cursor-pointer mt-2"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Save</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
+                      <input
+                        type="text"
+                        placeholder="Habra / Ashoknagar"
+                        value={onboardingData.city}
+                        onChange={(e) => setOnboardingData({ ...onboardingData, city: e.target.value })}
+                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
+                      <input
+                        type="text"
+                        placeholder="West Bengal"
+                        value={onboardingData.state}
+                        onChange={(e) => setOnboardingData({ ...onboardingData, state: e.target.value })}
+                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
+                      <input
+                        type="text"
+                        placeholder="743263"
+                        value={onboardingData.postalCode}
+                        onChange={(e) => setOnboardingData({ ...onboardingData, postalCode: e.target.value })}
+                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Leaflet GPS Map Picker */}
+                  <div className="pt-2">
+                    <LocationPicker
+                      coordinates={onboardingData.coordinates}
+                      onChange={(coords) => setOnboardingData({ ...onboardingData, coordinates: coords })}
+                      label="Pinpoint Location on Map:"
+                    />
+                  </div>
+
+                  {/* Make Default Address Checkbox */}
+                  <div className="pt-2">
+                    <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={onboardingData.isDefault}
+                        onChange={(e) => setOnboardingData({ ...onboardingData, isDefault: e.target.checked })}
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+                      />
+                      <span>Set as default delivery address</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={closeLoginModal}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+                  >
+                    {loading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Save className="w-3.5 h-3.5" />
+                        <span>SAVE</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+              </form>
+            )}
 
           </div>
         </div>
