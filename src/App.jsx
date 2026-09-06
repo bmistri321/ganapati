@@ -30,7 +30,7 @@ import { WhatsAppLoginModal } from './components/WhatsAppLoginModal';
 import { MyOrdersModal } from './components/MyOrdersModal';
 import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { fetchSingleProductById } from './services/supabaseStore';
-import { FlowerShower } from './components/FlowerShower';
+import { WelcomeConfetti } from './components/WelcomeConfetti';
 
 export function App() {
   const { settings } = useSettings();
@@ -209,8 +209,8 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-emerald-500 selection:text-white">
-      {/* Auspicious Welcoming Flower Shower on Visit */}
-      <FlowerShower />
+      {/* Gentle Welcome Confetti on Screen Load */}
+      <WelcomeConfetti />
 
       {/* Toast notifications */}
       <ToastContainer />
