@@ -626,9 +626,9 @@ export const CustomerProfileModal = () => {
                                 : 'border-slate-200/80 hover:border-slate-300 shadow-xs'
                             }`}
                           >
-                            {/* Card Top Row: Tag & Default Badge / Button */}
+                            {/* Card Top Row: Tag & Default Badge / Actions */}
                             <div className="flex items-center justify-between gap-2 mb-2.5">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200/60">
                                   {addr.tag === 'Home' && <Home className="w-3 h-3 text-slate-600" />}
                                   {addr.tag === 'Work' && <Briefcase className="w-3 h-3 text-slate-600" />}
@@ -644,15 +644,38 @@ export const CustomerProfileModal = () => {
                                 )}
                               </div>
 
-                              {!isDefault && (
+                              <div className="flex items-center gap-1.5">
+                                {!isDefault && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetDefaultAddress(addr.id)}
+                                    className="text-[11px] font-semibold text-slate-500 hover:text-emerald-700 underline underline-offset-2 transition-colors cursor-pointer mr-1"
+                                  >
+                                    Make Default
+                                  </button>
+                                )}
+
                                 <button
                                   type="button"
-                                  onClick={() => handleSetDefaultAddress(addr.id)}
-                                  className="text-[11px] font-semibold text-slate-500 hover:text-emerald-700 underline underline-offset-2 transition-colors cursor-pointer"
+                                  onClick={() => handleOpenEditAddress(addr)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/60 transition-colors cursor-pointer active:scale-95"
+                                  title="Edit Address"
                                 >
-                                  Make Default
+                                  <Pencil className="w-3 h-3 text-slate-600" />
+                                  <span>Edit</span>
                                 </button>
-                              )}
+
+                                {savedAddresses.length > 1 && !isDefault && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteAddress(addr.id, e)}
+                                    className="p-1 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                    title="Delete Address"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             {/* Recipient & Contact */}
@@ -682,29 +705,6 @@ export const CustomerProfileModal = () => {
                                   <MapPin className="w-3 h-3 text-emerald-600" />
                                   <span>GPS: {Number(addr.gpsCoords.lat).toFixed(4)}, {Number(addr.gpsCoords.lng).toFixed(4)}</span>
                                 </div>
-                              )}
-                            </div>
-
-                            {/* Card Footer Actions */}
-                            <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditAddress(addr)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                                <span>Edit Address</span>
-                              </button>
-
-                              {savedAddresses.length > 1 && !isDefault && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteAddress(addr.id, e)}
-                                  className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                  title="Delete Address"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
                               )}
                             </div>
 
