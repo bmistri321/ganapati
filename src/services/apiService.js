@@ -2,7 +2,7 @@
  * apiService.js
  * Unified API Service for WhatsApp OTP Auth, Live Products, COD Checkout & Invoices
  */
-import { supabase } from './supabase';
+import { supabase, STORE_ORGANIZATION_ID, submitStoreApiOrder } from './supabase';
 import { saveOrder, getSavedOrders } from './orderService';
 
 export const STORE_API_KEY = 'xyvot_pk_live_8d59e2_n4tuqdx7wivkrw';
@@ -48,7 +48,7 @@ export async function submitCODCheckout(orderPayload) {
     const savedOrder = await saveOrder({
       ...orderPayload,
       invoice_number: backendResult?.invoice_number || `INV-${Date.now()}`,
-      status: 'Pending COD Confirmation',
+      status: 'pending_cod',
       paymentMethod: 'Cash on Delivery (COD)'
     });
 
@@ -63,7 +63,7 @@ export async function submitCODCheckout(orderPayload) {
     console.error('COD Checkout API Error:', error);
     const localOrder = await saveOrder({
       ...orderPayload,
-      status: 'Pending COD Confirmation',
+      status: 'pending_cod',
       paymentMethod: 'Cash on Delivery (COD)'
     });
     return { success: true, order: localOrder };
@@ -75,14 +75,20 @@ export async function submitCODCheckout(orderPayload) {
  */
 export async function fetchCustomerOrders(phone) {
   const localOrders = getSavedOrders();
-  const cleanedPhone = phone ? phone.replace(/\D/g, '') : '';
+  const cleanedPhone = phone ? phone.toString().replace(/\D/g, '').slice(-10) : '';
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('sales_orders')
       .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .eq('organization_id', STORE_ORGANIZATION_ID)
+      .order('created_at', { ascending: false });
+
+    if (cleanedPhone) {
+      query = query.ilike('customer_phone', `%${cleanedPhone}%`);
+    }
+
+    const { data, error } = await query.limit(50);
 
     if (!error && Array.isArray(data)) {
       const formattedBackendOrders = data.map((ord) => ({
@@ -92,21 +98,21 @@ export async function fetchCustomerOrders(phone) {
         createdAt: ord.created_at,
         customer: {
           name: ord.customer_name,
-          phone: cleanedPhone || 'Verified Customer',
+          phone: ord.customer_phone || cleanedPhone || 'Verified Customer',
           email: ord.customer_email || ''
         },
         deliveryMethod: 'shipping',
-        paymentMethod: 'Cash on Delivery (COD)',
-        status: ord.status || 'Dispatched / On the Way',
+        paymentMethod: ord.payment_method || 'Cash on Delivery (COD)',
+        status: ord.status || 'pending_cod',
         subtotal: parseFloat(ord.subtotal || 0),
         deliveryFee: 0,
         total: parseFloat(ord.total_amount || 0),
-        items: []
+        items: Array.isArray(ord.items) ? ord.items : []
       }));
 
       const allOrders = [...localOrders];
       for (const bo of formattedBackendOrders) {
-        if (!allOrders.some((o) => o.orderId === bo.orderId || o.invoice_number === bo.invoice_number)) {
+        if (!allOrders.some((o) => o.orderId === bo.orderId || o.invoice_number === bo.invoice_number || o.id === bo.id)) {
           allOrders.push(bo);
         }
       }

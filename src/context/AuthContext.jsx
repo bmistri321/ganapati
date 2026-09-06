@@ -10,16 +10,16 @@ const AuthContext = createContext();
 const SESSION_KEY = 'customer_session';
 
 export const AuthProvider = ({ children }) => {
-  const [customer, setCustomer] = useState({
-    id: 'demo-cust-1',
-    fullName: 'Bishal Mistri',
-    phone: '9876543210',
-    email: 'bishal@example.com',
-    address: 'Station Road, 4no Gali, Habra',
-    city: 'Habra / Ashoknagar',
-    postalCode: '743263',
-    gpsLat: 22.8291,
-    gpsLng: 88.6148
+  const [customer, setCustomer] = useState(() => {
+    try {
+      const savedSession = localStorage.getItem(SESSION_KEY) || localStorage.getItem('quickcart_customer_session');
+      if (savedSession) {
+        return JSON.parse(savedSession);
+      }
+    } catch (e) {
+      console.warn('Could not read customer session', e);
+    }
+    return null;
   });
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
@@ -41,13 +41,15 @@ export const AuthProvider = ({ children }) => {
     generatedOtp: null
   });
 
-  // Load session on startup
+  // Sync session on mount/storage
   useEffect(() => {
     try {
       const savedSession = localStorage.getItem(SESSION_KEY) || localStorage.getItem('quickcart_customer_session');
       if (savedSession) {
         const sessionData = JSON.parse(savedSession);
         setCustomer(sessionData);
+      } else {
+        setCustomer(null);
       }
     } catch (e) {
       console.warn('Could not read customer session', e);
@@ -132,9 +134,16 @@ export const AuthProvider = ({ children }) => {
    * Customer Logout
    */
   const logout = () => {
-    localStorage.removeItem('customer_session');
-    localStorage.removeItem('quickcart_customer_session');
+    try {
+      localStorage.removeItem('customer_session');
+      localStorage.removeItem('quickcart_customer_session');
+      localStorage.removeItem('customer_saved_addresses');
+      localStorage.removeItem('quickcart_saved_orders');
+    } catch (e) {}
     setCustomer(null);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('address_changed', { detail: [] }));
+    }
   };
 
   return (

@@ -190,5 +190,19 @@ export const addressService = {
       }
     }
     return updatedList;
+  },
+
+  /**
+   * 6. Clear Addresses (Used on customer logout)
+   */
+  clearAddresses: () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('address_changed', { detail: [] }));
+      }
+    } catch (e) {
+      console.warn('Could not clear addresses', e);
+    }
   }
 };

@@ -5,11 +5,12 @@
  */
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://qirpufadoruqvgubpqzx.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcnB1ZmFkb3J1cXZndWJwcXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNjgwODUsImV4cCI6MjEwMzk0NDA4NX0.WBzX3E401higTSSrjYMx5LQEcOptiiaU_4Id5j_X8PI';
+const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || 'https://qirpufadoruqvgubpqzx.supabase.co';
+const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcnB1ZmFkb3J1cXZndWJwcXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNjgwODUsImV4cCI6MjEwMzk0NDA4NX0.WBzX3E401higTSSrjYMx5LQEcOptiiaU_4Id5j_X8PI';
 
 export const STORE_API_KEY = 'xyvot_pk_live_8d59e2_n4tuqdx7wivkrw';
 export const DEFAULT_STORE_API_KEY = STORE_API_KEY;
+export const STORE_ORGANIZATION_ID = '8d59e2c6-4245-4079-aae8-545bcb2d7f8a';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -240,6 +241,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
   const formattedOrder = {
     invoice_number: invNumber,
     orderId: invNumber,
+    organization_id: STORE_ORGANIZATION_ID,
     customer_name: orderPayload.customer_name || orderPayload.customerName || orderPayload.customer?.name || 'Website Customer',
     customer_phone: orderPayload.customer_phone || orderPayload.customerPhone || orderPayload.customer?.phone || '',
     customer_email: orderPayload.customer_email || orderPayload.customerEmail || orderPayload.customer?.email || null,
@@ -253,8 +255,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
     subtotal: subtotalAmount,
     discount_pct: 0,
     discount_amount: 0,
-    taxable_amount: subtotalAmount,
-    gst_amount: ((subtotalAmount * 0.18) / 1.18),
+    gst: 0,
     total_amount: totalAmount,
     total: totalAmount,
     deliveryFee: orderPayload.deliveryFee || 0,
@@ -265,7 +266,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
       price: parseFloat(item.unit_price || item.price || 0),
       unit_price: parseFloat(item.unit_price || item.price || 0),
       quantity: parseInt(item.quantity || 1, 10),
-      image: item.image || null
+      image: item.image || item.image_url || null
     })),
     createdAt: new Date().toISOString()
   };
@@ -275,6 +276,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
     const { data, error } = await supabase
       .from('sales_orders')
       .insert([{
+        organization_id: STORE_ORGANIZATION_ID,
         invoice_number: formattedOrder.invoice_number,
         customer_name: formattedOrder.customer_name,
         customer_phone: formattedOrder.customer_phone,
@@ -285,8 +287,7 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
         subtotal: formattedOrder.subtotal,
         discount_pct: 0,
         discount_amount: 0,
-        taxable_amount: formattedOrder.taxable_amount,
-        gst_amount: formattedOrder.gst_amount,
+        gst: 0,
         total_amount: formattedOrder.total_amount,
         payment_method: formattedOrder.payment_method,
         channel: 'website',
@@ -295,11 +296,13 @@ export async function submitStoreApiOrder(apiKey, orderPayload) {
       }])
       .select();
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      console.error('Supabase sales_orders insert error:', error);
+    } else if (data && data.length > 0) {
       formattedOrder.id = data[0].id;
     }
   } catch (err) {
-    console.warn('Could not record in sales_orders table:', err);
+    console.error('Could not record in sales_orders table:', err);
   }
 
   // Backup to localStorage for client order history

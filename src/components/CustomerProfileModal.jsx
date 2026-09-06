@@ -61,31 +61,34 @@ export const CustomerProfileModal = () => {
     const list = addressService.getAddresses();
     if (list.length > 0) return list;
 
-    const fallback = [
-      {
-        id: 'addr_default',
-        tag: 'Home',
-        label: 'Home',
-        name: activeCustomer?.fullName || activeCustomer?.name || 'Bishal Mistri',
-        recipientName: activeCustomer?.fullName || activeCustomer?.name || 'Bishal Mistri',
-        phone: activeCustomer?.phone || '9876543210',
-        address: activeCustomer?.address || activeCustomer?.shippingAddress?.street || 'Station Road, 4no Gali, Habra',
-        street: activeCustomer?.address || activeCustomer?.shippingAddress?.street || 'Station Road, 4no Gali, Habra',
-        city: activeCustomer?.city || activeCustomer?.shippingAddress?.city || 'Habra / Ashoknagar',
-        state: activeCustomer?.state || activeCustomer?.shippingAddress?.state || 'West Bengal',
-        postalCode: activeCustomer?.postalCode || activeCustomer?.shippingAddress?.postalCode || '743263',
-        pincode: activeCustomer?.postalCode || activeCustomer?.shippingAddress?.postalCode || '743263',
-        lat: activeCustomer?.gpsLat || activeCustomer?.shippingAddress?.coordinates?.lat || 22.8291,
-        lng: activeCustomer?.gpsLng || activeCustomer?.shippingAddress?.coordinates?.lng || 88.6148,
-        gpsCoords: {
+    if (activeCustomer && (activeCustomer.address || activeCustomer.shippingAddress?.street)) {
+      const fallback = [
+        {
+          id: 'addr_default',
+          tag: 'Home',
+          label: 'Home',
+          name: activeCustomer?.fullName || activeCustomer?.name || 'Customer',
+          recipientName: activeCustomer?.fullName || activeCustomer?.name || 'Customer',
+          phone: activeCustomer?.phone || '',
+          address: activeCustomer?.address || activeCustomer?.shippingAddress?.street || '',
+          street: activeCustomer?.address || activeCustomer?.shippingAddress?.street || '',
+          city: activeCustomer?.city || activeCustomer?.shippingAddress?.city || 'Habra / Ashoknagar',
+          state: activeCustomer?.state || activeCustomer?.shippingAddress?.state || 'West Bengal',
+          postalCode: activeCustomer?.postalCode || activeCustomer?.shippingAddress?.postalCode || '743263',
+          pincode: activeCustomer?.postalCode || activeCustomer?.shippingAddress?.postalCode || '743263',
           lat: activeCustomer?.gpsLat || activeCustomer?.shippingAddress?.coordinates?.lat || 22.8291,
-          lng: activeCustomer?.gpsLng || activeCustomer?.shippingAddress?.coordinates?.lng || 88.6148
-        },
-        isDefault: true
-      }
-    ];
-    localStorage.setItem('customer_saved_addresses', JSON.stringify(fallback));
-    return fallback;
+          lng: activeCustomer?.gpsLng || activeCustomer?.shippingAddress?.coordinates?.lng || 88.6148,
+          gpsCoords: {
+            lat: activeCustomer?.gpsLat || activeCustomer?.shippingAddress?.coordinates?.lat || 22.8291,
+            lng: activeCustomer?.gpsLng || activeCustomer?.shippingAddress?.coordinates?.lng || 88.6148
+          },
+          isDefault: true
+        }
+      ];
+      localStorage.setItem('customer_saved_addresses', JSON.stringify(fallback));
+      return fallback;
+    }
+    return [];
   });
 
   // Active form state for Add/Edit
@@ -101,13 +104,22 @@ export const CustomerProfileModal = () => {
   const [formIsDefault, setFormIsDefault] = useState(true);
   const [isLocating, setIsLocating] = useState(false);
 
+  // Listen for address_changed event across components
+  useEffect(() => {
+    const handleAddressChanged = (e) => {
+      setSavedAddresses(e.detail || []);
+    };
+    window.addEventListener('address_changed', handleAddressChanged);
+    return () => window.removeEventListener('address_changed', handleAddressChanged);
+  }, []);
+
   // Synchronize when modal opens or tab props change
   useEffect(() => {
     if (isProfileOpen) {
       if (profileInitialTab) setActiveTab(profileInitialTab);
       if (profileInitialSubView) setAddressSubView(profileInitialSubView);
       const latest = addressService.getAddresses();
-      if (latest.length > 0) setSavedAddresses(latest);
+      setSavedAddresses(latest);
     }
   }, [isProfileOpen, profileInitialTab, profileInitialSubView]);
 
