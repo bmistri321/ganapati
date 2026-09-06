@@ -199,7 +199,7 @@ export const CartDrawer = () => {
           {/* Footer / Breakdown & Checkout Action */}
           {cartItems.length > 0 && (
             <div className="p-4 sm:p-5 border-t border-slate-100 bg-white space-y-3.5">
-              <div className="bg-[#F4F5F7] p-3.5 rounded-2xl text-xs space-y-2">
+              <div className="text-xs space-y-2 pb-1">
                 <div className="flex justify-between text-slate-600">
                   <span>Items Subtotal ({totalItemsCount})</span>
                   <span className="font-semibold text-slate-900 font-mono">{settings.currency}{subtotal.toFixed(2)}</span>
@@ -208,7 +208,7 @@ export const CartDrawer = () => {
                   <span>Estimated Fulfillment</span>
                   <span className="text-slate-500 font-medium">Calculated at checkout</span>
                 </div>
-                <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-200/60">
+                <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-100">
                   <span>Subtotal Amount</span>
                   <span className="text-base font-black text-slate-900 font-mono">{settings.currency}{subtotal.toFixed(2)}</span>
                 </div>
