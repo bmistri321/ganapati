@@ -481,7 +481,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Email Address <span className="text-slate-400 font-normal">(Optional for tax invoice PDF)</span>
+                          Email Address
                         </label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
