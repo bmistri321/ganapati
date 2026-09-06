@@ -289,9 +289,6 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
               <h2 className="text-base font-bold text-slate-900 tracking-tight">
                 Checkout & Dispatch
               </h2>
-              <p className="text-xs text-slate-500">
-                Direct WhatsApp Store Dispatch &bull; Cash on Delivery
-              </p>
             </div>
 
             <button
