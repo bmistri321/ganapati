@@ -500,9 +500,6 @@ export const WhatsAppLoginModal = () => {
 
               {/* GPS Location Pin */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  GPS Map Delivery Pin
-                </label>
                 <LocationPicker
                   coordinates={onboardingData.coordinates}
                   onChange={(coords) => setOnboardingData({ ...onboardingData, coordinates: coords })}

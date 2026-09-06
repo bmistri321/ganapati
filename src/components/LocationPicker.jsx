@@ -13,7 +13,7 @@ const customIcon = L.icon({
   shadowSize: [41, 41]
 });
 
-export const LocationPicker = ({ coordinates, onChange, addressHint = '' }) => {
+export const LocationPicker = ({ coordinates, onChange, addressHint = '', label = 'GPS Map Delivery Pin' }) => {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
@@ -59,21 +59,16 @@ export const LocationPicker = ({ coordinates, onChange, addressHint = '' }) => {
       mapInstanceRef.current = map;
       markerRef.current = marker;
     } else {
-      // Update marker position if coordinates change externally
-      if (coordinates?.lat && coordinates?.lng && markerRef.current) {
-        const currentLatLng = markerRef.current.getLatLng();
-        if (
-          Math.abs(currentLatLng.lat - coordinates.lat) > 0.0001 ||
-          Math.abs(currentLatLng.lng - coordinates.lng) > 0.0001
-        ) {
-          markerRef.current.setLatLng([coordinates.lat, coordinates.lng]);
-          mapInstanceRef.current.setView([coordinates.lat, coordinates.lng], 15);
-        }
+      if (coordinates?.lat && coordinates?.lng) {
+        markerRef.current?.setLatLng([coordinates.lat, coordinates.lng]);
+        mapInstanceRef.current?.setView([coordinates.lat, coordinates.lng], mapInstanceRef.current.getZoom());
       }
     }
+  }, [coordinates?.lat, coordinates?.lng]);
 
+  // Clean up on unmount
+  useEffect(() => {
     return () => {
-      // Clean up map on unmount
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -83,7 +78,7 @@ export const LocationPicker = ({ coordinates, onChange, addressHint = '' }) => {
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setGeoError('Geolocation is not supported by your browser');
+      setGeoError('Geolocation is not supported by your browser.');
       return;
     }
 
@@ -113,12 +108,17 @@ export const LocationPicker = ({ coordinates, onChange, addressHint = '' }) => {
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-2">
+        {label && (
+          <label className="block text-xs font-bold text-slate-700">
+            {label}
+          </label>
+        )}
         <button
           type="button"
           onClick={handleGetCurrentLocation}
           disabled={isLocating}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer ml-auto flex-shrink-0"
         >
           <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
           {isLocating ? 'Detecting GPS...' : 'Use My GPS Location'}
