@@ -273,7 +273,8 @@ export const WhatsAppLoginModal = () => {
                 Welcome to Ganapati Store
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Enter your WhatsApp number to receive an instant 6-digit verification code.
+                Enter your WhatsApp number to receive an instant <br />
+                6-digit verification code.
               </p>
             </div>
 
