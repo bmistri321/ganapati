@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Trash2, ShoppingBag, ArrowRight, Plus, Minus, AlertCircle, Sparkles, Package, Lock } from 'lucide-react';
+import { X, Trash2, ShoppingBag, ArrowRight, Plus, Minus, AlertCircle, Package, Lock } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 
@@ -27,12 +27,6 @@ export const CartDrawer = () => {
   }, [isCartOpen, setIsCartOpen]);
 
   if (!isCartOpen) return null;
-
-  const freeShippingLeft = Math.max(0, settings.freeShippingThreshold - subtotal);
-  const freeShippingProgress = Math.min(
-    100,
-    (subtotal / settings.freeShippingThreshold) * 100
-  );
 
   const handleProceedToCheckout = () => {
     setIsCartOpen(false);
@@ -82,28 +76,6 @@ export const CartDrawer = () => {
               >
                 <X className="w-5 h-5" />
               </button>
-            </div>
-          </div>
-
-          {/* Free Shipping Progress Bar */}
-          <div className="bg-[#F4F5F7] px-4 sm:px-5 py-3 border-b border-slate-100">
-            <div className="flex items-center justify-between text-xs mb-1 font-medium">
-              {freeShippingLeft > 0 ? (
-                <span className="text-slate-700">
-                  Add <strong className="text-slate-900">{settings.currency}{freeShippingLeft.toFixed(2)}</strong> for <strong className="text-slate-900">FREE Shipping</strong>
-                </span>
-              ) : (
-                <span className="text-slate-900 font-bold flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-slate-900" /> You've unlocked FREE Shipping!
-                </span>
-              )}
-              <span className="text-slate-500 font-mono font-bold text-[11px]">{Math.round(freeShippingProgress)}%</span>
-            </div>
-            <div className="w-full bg-slate-200/80 h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-slate-900 h-full rounded-full transition-all duration-500"
-                style={{ width: `${freeShippingProgress}%` }}
-              />
             </div>
           </div>
 
