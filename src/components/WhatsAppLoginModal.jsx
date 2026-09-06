@@ -10,9 +10,9 @@ export const WhatsAppLoginModal = () => {
   const { isAuthOpen, setIsAuthOpen, setCurrentCustomer } = useAuth();
   const { showToast } = useToast();
 
-  const [phone, setPhone] = useState('9876543210');
+  const [phone, setPhone] = useState('');
   // step: 'phone' | 'otp' | 'onboarding'
-  const [step, setStep] = useState('onboarding');
+  const [step, setStep] = useState('phone');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(300);
@@ -32,6 +32,15 @@ export const WhatsAppLoginModal = () => {
   const [onboardingErrors, setOnboardingErrors] = useState({});
 
   const inputRefs = useRef([]);
+
+  useEffect(() => {
+    if (isAuthOpen) {
+      setStep('phone');
+      setOtpDigits(['', '', '', '', '', '']);
+      setLoading(false);
+      setCountdown(300);
+    }
+  }, [isAuthOpen]);
 
   useEffect(() => {
     let timer;
