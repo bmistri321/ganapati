@@ -583,19 +583,6 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
               </div>
             )}
 
-            {/* Payment Method Notice */}
-            <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
-              <div className="text-xs">
-                <span className="font-bold text-slate-900 block">
-                  {deliveryMethod === 'shipping' ? 'Payment Method: Cash on Delivery (COD)' : 'Payment Method: Pay at Store on Pickup'}
-                </span>
-                <span className="text-slate-600 text-[11px] leading-relaxed">
-                  Pay with cash or UPI upon {deliveryMethod === 'shipping' ? 'doorstep delivery' : 'store pickup'}. 100% verified & secure.
-                </span>
-              </div>
-            </div>
-
             {/* Order Items & Cost Breakdown */}
             <div className="bg-[#F4F5F7] p-3.5 rounded-2xl text-xs space-y-2">
               <div className="flex justify-between text-slate-600">
@@ -611,6 +598,19 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
               <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-200/60">
                 <span>Total Payable ({deliveryMethod === 'shipping' ? 'COD' : 'Pickup'})</span>
                 <span className="text-slate-900 text-base">{settings.currency}{grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Payment Method Notice (Just before Place Order) */}
+            <div className="p-3.5 rounded-2xl bg-[#F4F5F7] flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
+              <div className="text-xs">
+                <span className="font-bold text-slate-900 block">
+                  {deliveryMethod === 'shipping' ? 'Payment Method: Cash on Delivery (COD)' : 'Payment Method: Pay at Store on Pickup'}
+                </span>
+                <span className="text-slate-600 text-[11px] leading-relaxed">
+                  Pay with cash or UPI upon {deliveryMethod === 'shipping' ? 'doorstep delivery' : 'store pickup'}. 100% verified & secure.
+                </span>
               </div>
             </div>
 
