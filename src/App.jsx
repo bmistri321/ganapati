@@ -15,10 +15,6 @@ import { supabase } from './services/supabase';
 import { 
   SlidersHorizontal, 
   ArrowUpDown, 
-  Sparkles, 
-  ShieldCheck, 
-  Truck, 
-  MessageCircle, 
   Package, 
   Search,
   RefreshCw,
@@ -274,62 +270,15 @@ export function App() {
         />
       ) : (
         <>
-          {/* Hero Section (Light Version matching Ganapati Store) */}
-          <section className="relative overflow-hidden bg-gradient-to-b from-white via-emerald-50/30 to-slate-50 border-b border-slate-200/80 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-            <div className="absolute inset-0 opacity-[0.12] bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
-            
-            <div className="max-w-7xl mx-auto relative z-10">
-              <div className="max-w-3xl space-y-3 sm:space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/70 border border-emerald-200/80 text-emerald-800 text-xs font-bold shadow-xs">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Fresh Groceries &bull; Live Inventory &bull; WhatsApp COD</span>
-                </div>
-
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-slate-900">
-                  Ganapati Store{' '}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">
-                    &bull; Daily Essentials & Staples
-                  </span>
-                </h1>
-
-                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
-                  Order authentic groceries, staples, spices, and fresh household essentials. Enjoy live stock availability, GPS map pinpointing for doorstep delivery, and 100% verified Cash on Delivery.
-                </p>
-
-                {/* Value Props */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-2 text-xs font-semibold text-slate-700">
-                  <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 p-2.5 sm:p-3 rounded-lg shadow-xs hover:border-emerald-300 transition-colors">
-                    <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">WhatsApp OTP</p>
-                      <p className="text-[10px] text-slate-500 font-normal">Instant 1-Click Login</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 p-2.5 sm:p-3 rounded-lg shadow-xs hover:border-emerald-300 transition-colors">
-                    <div className="w-7 h-7 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0">
-                      <Truck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">GPS Map Pin</p>
-                      <p className="text-[10px] text-slate-500 font-normal">Accurate Doorstep Drop</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 p-2.5 sm:p-3 rounded-lg shadow-xs hover:border-emerald-300 transition-colors col-span-2 sm:col-span-1">
-                    <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                      <ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">Cash on Delivery</p>
-                      <p className="text-[10px] text-slate-500 font-normal">Pay When Delivered</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Store Banner Image */}
+          <section className="w-full border-b border-slate-200/80">
+            <img
+              src="https://res.cloudinary.com/ovj5ffsn/image/upload/v1788721833/freepik-flat-professional-supermarket-green-facebook-header-20260906190851o7W2.png"
+              alt="Ganapati Store — Fresh Groceries & Daily Essentials"
+              className="w-full h-auto block object-cover"
+              loading="eager"
+              style={{ maxHeight: '320px', objectFit: 'cover', objectPosition: 'center' }}
+            />
           </section>
 
           {/* Catalog Main 2-Column Split Layout Area (Mobile & Desktop) */}
