@@ -11,7 +11,7 @@ const SESSION_KEY = 'customer_session';
 
 export const AuthProvider = ({ children }) => {
   const [customer, setCustomer] = useState(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(true);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 

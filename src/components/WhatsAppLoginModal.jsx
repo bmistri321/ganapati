@@ -9,9 +9,9 @@ export const WhatsAppLoginModal = () => {
   const { isAuthOpen, setIsAuthOpen, setCurrentCustomer } = useAuth();
   const { showToast } = useToast();
 
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('9876543210');
   // step: 'phone' | 'otp' | 'onboarding'
-  const [step, setStep] = useState('phone');
+  const [step, setStep] = useState('onboarding');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(300);
@@ -20,7 +20,7 @@ export const WhatsAppLoginModal = () => {
   const [onboardingData, setOnboardingData] = useState({
     fullName: '',
     street: '',
-    city: 'Habra',
+    city: 'Habra / Ashoknagar',
     state: 'West Bengal',
     postalCode: '743263',
     email: '',
@@ -150,7 +150,7 @@ export const WhatsAppLoginModal = () => {
           fullName: loggedInCust.fullName !== 'Verified Customer' ? (loggedInCust.fullName || '') : '',
           email: loggedInCust.email || '',
           street: loggedInCust.address || loggedInCust.shippingAddress?.street || '',
-          city: loggedInCust.city || 'Habra',
+          city: loggedInCust.city || 'Habra / Ashoknagar',
           postalCode: loggedInCust.postalCode || '743263',
           coordinates: {
             lat: loggedInCust.gpsLat || loggedInCust.shippingAddress?.coordinates?.lat || 22.8291,
@@ -387,11 +387,7 @@ export const WhatsAppLoginModal = () => {
         {step === 'onboarding' && (
           /* Step 3: First-Time User Profile & Address Setup */
           <div className="space-y-4 pt-1 sm:pt-0 overflow-y-auto max-h-[78vh] pr-1">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold mb-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                <span>WhatsApp Verified (+91 {phone})</span>
-              </div>
+            <div className="space-y-1">
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 Set Up Your Delivery Profile
               </h2>
@@ -410,7 +406,7 @@ export const WhatsAppLoginModal = () => {
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="e.g. Bishal Mistri"
+                    placeholder="Enter your full name"
                     value={onboardingData.fullName}
                     onChange={(e) => {
                       setOnboardingData({ ...onboardingData, fullName: e.target.value });
@@ -476,7 +472,7 @@ export const WhatsAppLoginModal = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Habra / Kolkata"
+                    placeholder="e.g. Habra / Ashoknagar"
                     value={onboardingData.city}
                     onChange={(e) => {
                       setOnboardingData({ ...onboardingData, city: e.target.value });
