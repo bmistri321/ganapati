@@ -386,7 +386,7 @@ export const WhatsAppLoginModal = () => {
 
         {step === 'onboarding' && (
           /* Step 3: First-Time User Profile & Address Setup */
-          <div className="space-y-5 pt-1 sm:pt-0 overflow-y-auto max-h-[78vh] pr-1">
+          <div className="space-y-5 pb-6">
             <div className="space-y-1.5 pb-1">
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 Set Up Your Delivery Profile
