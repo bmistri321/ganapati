@@ -370,7 +370,7 @@ export function App() {
                             key={catName}
                             categoryName={catName}
                             products={catProducts}
-                            onSelectProduct={(p) => setSelectedProduct(p)}
+                            onSelectProduct={handleSelectProduct}
                             onViewCategory={(cat) => setSelectedCategory(cat)}
                           />
                         );
@@ -383,7 +383,7 @@ export function App() {
                       <ProductCard
                         key={product.id}
                         product={product}
-                        onSelectProduct={(p) => setSelectedProduct(p)}
+                        onSelectProduct={handleSelectProduct}
                       />
                     ))}
                   </div>

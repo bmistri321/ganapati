@@ -7,24 +7,18 @@ import {
   Package, 
   Minus, 
   Plus, 
-  Layers,
-  Share2,
-  Copy,
-  MessageCircle
+  Layers
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
-import { useToast } from '../context/ToastContext';
 import { ProductCard } from './ProductCard';
 
 export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduct }) => {
   const { addToCart, setIsCheckoutOpen, cartItems } = useCart();
   const { settings } = useSettings();
-  const { showToast } = useToast();
   const [selectedImage, setSelectedImage] = useState(product?.image || '');
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('reviews'); // 'reviews' | 'description'
-  const [copied, setCopied] = useState(false);
 
   // Real XYVOT variants
   const variants = product?.variants || [];
@@ -53,39 +47,6 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
   const currentSku = selectedVariant ? (selectedVariant.sku || product.sku) : product.sku;
   const isOutOfStock = currentStock <= 0;
   const isLowStock = currentStock > 0 && currentStock <= (selectedVariant?.low_stock_threshold || 3);
-
-  const getProductShareUrl = () => {
-    return `${window.location.origin}/product/${product.id}`;
-  };
-
-  const handleCopyLink = async () => {
-    const url = getProductShareUrl();
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = url;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      setCopied(true);
-      showToast('Product link copied to clipboard!', 'success');
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      showToast('Could not copy link', 'error');
-    }
-  };
-
-  const handleShareWhatsApp = () => {
-    const url = getProductShareUrl();
-    const vLabel = selectedVariant ? ` (${selectedVariant.name || selectedVariant.size})` : '';
-    const text = `Check out *${product.title}${vLabel}* on *Ganapati Store* for ${settings.currency}${currentPrice.toFixed(0)}:\n${url}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-  };
 
   // Similar products from same category
   const similarProducts = allProducts
@@ -324,41 +285,6 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
                 <span>Buy now</span>
               </button>
 
-            </div>
-
-            {/* Unique Link & Share Bar */}
-            <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
-                  <Share2 className="w-3.5 h-3.5 text-slate-400" /> Share:
-                </span>
-                <button
-                  type="button"
-                  onClick={handleShareWhatsApp}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
-                  title="Share product on WhatsApp"
-                >
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>WhatsApp</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
-                  title="Copy direct product link"
-                >
-                  {copied ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-slate-500" />
-                  )}
-                  <span>{copied ? 'Link Copied!' : 'Copy Link'}</span>
-                </button>
-              </div>
-
-              <span className="text-[11px] text-slate-400 font-mono">
-                ID: {product.id}
-              </span>
             </div>
 
           </div>
