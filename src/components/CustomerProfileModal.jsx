@@ -235,20 +235,20 @@ export const CustomerProfileModal = () => {
     }
   };
 
-  // Delete an address
+  // Delete an address (Default address cannot be deleted)
   const handleDeleteAddress = async (id, e) => {
     e?.stopPropagation();
+    const toDelete = savedAddresses.find(a => a.id === id);
+    if (toDelete?.isDefault) {
+      showToast('Default address cannot be deleted. Set another address as default first.', 'warning');
+      return;
+    }
     if (savedAddresses.length <= 1) {
       showToast('You must keep at least one saved delivery address', 'warning');
       return;
     }
     const phone = activeCustomer?.phone || '';
-    const toDelete = savedAddresses.find(a => a.id === id);
     const updated = await addressService.deleteAddress(phone, id);
-    if (toDelete?.isDefault && updated.length > 0) {
-      const newDef = updated.find(a => a.isDefault) || updated[0];
-      syncDefaultAddressToProfile(newDef);
-    }
     setSavedAddresses(updated);
     showToast('Address removed from address book', 'info');
   };
@@ -696,7 +696,7 @@ export const CustomerProfileModal = () => {
                                 <span>Edit Address</span>
                               </button>
 
-                              {savedAddresses.length > 1 && (
+                              {savedAddresses.length > 1 && !isDefault && (
                                 <button
                                   type="button"
                                   onClick={(e) => handleDeleteAddress(addr.id, e)}

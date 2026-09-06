@@ -155,16 +155,17 @@ export const addressService = {
   },
 
   /**
-   * 5. Delete Address
+   * 5. Delete Address (Default address cannot be deleted)
    */
   deleteAddress: async (phone, addressId) => {
     const list = addressService.getAddresses();
-    let updatedList = list.filter((item) => item.id !== addressId);
-
-    // If the deleted one was default, make the first remaining address default
-    if (updatedList.length > 0 && !updatedList.some((a) => a.isDefault)) {
-      updatedList[0].isDefault = true;
+    const toDelete = list.find((item) => item.id === addressId);
+    if (toDelete?.isDefault) {
+      console.warn('Cannot delete default address');
+      return list;
     }
+
+    let updatedList = list.filter((item) => item.id !== addressId);
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
 
