@@ -280,7 +280,7 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
 
       {/* Slide-over Right Side Panel Drawer */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
-        <div className="w-full sm:w-screen sm:max-w-xl bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full">
+        <div className="w-full sm:w-screen sm:max-w-md bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full">
           
           {/* Header */}
           <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between bg-white sticky top-0 z-20">
