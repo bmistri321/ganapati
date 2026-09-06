@@ -729,30 +729,6 @@ export const CustomerProfileModal = () => {
                 {/* SUB-VIEW 2B: ADD / EDIT ADDRESS FORM WITH MAP */}
                 {(addressSubView === 'add' || addressSubView === 'edit') && (
                   <form onSubmit={handleSaveAddressForm} className="space-y-4 animate-fade-in bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
-                    
-                    {/* Header with Back button */}
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-900">
-                          {addressSubView === 'add' ? 'Add New Delivery Address' : 'Edit Delivery Address'}
-                        </h3>
-                        <p className="text-[11px] text-slate-400">
-                          Enter your recipient details and pinpoint on the map
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAddressSubView('list');
-                          setEditingAddressId(null);
-                        }}
-                        className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-
                     {/* Address Tag Selector */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-semibold text-slate-700">
