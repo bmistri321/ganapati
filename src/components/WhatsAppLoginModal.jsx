@@ -300,17 +300,17 @@ export const WhatsAppLoginModal = () => {
             
             {step === 'phone' && (
               /* Step 1: Phone Entry */
-              <div className="space-y-5 my-auto">
-                <div className="text-center space-y-1">
+              <div className="space-y-5 my-auto text-left">
+                <div className="text-left space-y-1">
                   <h3 className="text-lg font-bold text-slate-900">Enter WhatsApp Number</h3>
                   <p className="text-xs text-slate-500">
                     We will send a 6-digit instant verification code
                   </p>
                 </div>
 
-                <form onSubmit={handleSendOtp} className="space-y-4">
+                <form onSubmit={handleSendOtp} className="space-y-4 text-left">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 text-left">
                       Mobile Phone Number
                     </label>
                     <div className="relative">
@@ -349,16 +349,16 @@ export const WhatsAppLoginModal = () => {
 
             {step === 'otp' && (
               /* Step 2: OTP Verification */
-              <div className="space-y-5 my-auto">
-                <div className="text-center space-y-1">
+              <div className="space-y-5 my-auto text-left">
+                <div className="text-left space-y-1">
                   <h3 className="text-lg font-bold text-slate-900">Verify WhatsApp OTP</h3>
                   <p className="text-xs text-slate-500">
                     Code sent to <span className="font-semibold text-slate-800">+91 {phone}</span>
                   </p>
                 </div>
 
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
+                <form onSubmit={handleVerifyOtp} className="space-y-4 text-left">
+                  <div className="flex justify-start gap-2" onPaste={handleOtpPaste}>
                     {otpDigits.map((digit, index) => (
                       <input
                         key={index}
@@ -374,7 +374,7 @@ export const WhatsAppLoginModal = () => {
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 px-0.5">
                     <span>
                       Resend in <span className="font-semibold font-mono text-slate-800">{formatMinutes(countdown)}</span>
                     </span>
