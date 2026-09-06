@@ -227,26 +227,43 @@ export const WhatsAppLoginModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fade-in"
         onClick={closeLoginModal}
       />
 
-      {/* Mobile-First Bottom Sheet / Modern Modal Card */}
-      <div className={`relative bg-white rounded-t-[32px] sm:rounded-2xl shadow-2xl ${step === 'onboarding' ? 'max-w-xl' : 'max-w-md'} w-full overflow-hidden z-10 animate-slide-up border-t sm:border border-slate-200/90 p-5 sm:p-7 flex flex-col justify-between max-h-[92vh]`}>
-        
-        {/* Mobile Pull/Drag Handle */}
-        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-4 sm:hidden" />
+      {/* Slide-over Right Side Panel Drawer */}
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
+        <div className="w-full sm:w-screen sm:max-w-md bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full overflow-hidden">
+          
+          {/* Header */}
+          <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between bg-white flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <Smartphone className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900 tracking-tight">
+                  {step === 'onboarding' ? 'Customer Profile' : 'WhatsApp Login'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  {step === 'otp' ? 'Enter 6-digit verification code' : step === 'onboarding' ? 'Complete your delivery details' : 'Direct 1-Click Verification'}
+                </p>
+              </div>
+            </div>
 
-        {/* Close Button */}
-        <button
-          onClick={closeLoginModal}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
+            <button
+              onClick={closeLoginModal}
+              className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Drawer Body */}
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
 
         {step === 'phone' && (
           /* Step 1: Mobile Phone Number Input */
@@ -517,6 +534,8 @@ export const WhatsAppLoginModal = () => {
           </div>
         )}
 
+          </div>
+        </div>
       </div>
     </div>
   );
