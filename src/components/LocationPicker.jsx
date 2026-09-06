@@ -129,14 +129,14 @@ export const LocationPicker = ({ coordinates, onChange, addressHint = '', label 
         <div ref={mapContainerRef} className="w-full h-full" />
         
         <div className="absolute bottom-2 left-2 right-2 z-20 pointer-events-none">
-          <div className="bg-white/95 backdrop-blur-md text-slate-900 border border-slate-200/90 px-3 py-1.5 rounded-lg text-xs flex items-center justify-between shadow-md">
+          <div className="bg-white/60 backdrop-blur-md text-slate-900 border border-white/60 px-3 py-1.5 rounded-lg text-xs flex items-center justify-between shadow-xs">
             <span className="truncate flex items-center gap-1.5 text-slate-900 font-bold">
               <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
               {coordinates?.lat && coordinates?.lng
                 ? `${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)}`
                 : 'Click or drag pin to delivery spot'}
             </span>
-            <span className="text-[10px] text-slate-500 font-medium ml-2">
+            <span className="text-[10px] text-slate-700 font-medium ml-2">
               Will link to Google Maps
             </span>
           </div>
