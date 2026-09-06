@@ -236,34 +236,19 @@ export const WhatsAppLoginModal = () => {
 
       {/* Slide-over Right Side Panel Drawer */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
-        <div className="w-full sm:w-screen sm:max-w-md bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full overflow-hidden">
+        <div className="w-full sm:w-screen sm:max-w-md bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200/90 h-full overflow-hidden relative">
           
-          {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between bg-white flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-                <Smartphone className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-slate-900 tracking-tight">
-                  {step === 'onboarding' ? 'Customer Profile' : 'WhatsApp Login'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  {step === 'otp' ? 'Enter 6-digit verification code' : step === 'onboarding' ? 'Complete your delivery details' : 'Direct 1-Click Verification'}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={closeLoginModal}
-              className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          {/* Close Button Top-Right */}
+          <button
+            onClick={closeLoginModal}
+            className="absolute top-4 right-4 z-20 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
           {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-7 pt-8 sm:pt-10">
 
         {step === 'phone' && (
           /* Step 1: Mobile Phone Number Input */
@@ -387,16 +372,7 @@ export const WhatsAppLoginModal = () => {
         {step === 'onboarding' && (
           /* Step 3: First-Time User Profile & Address Setup */
           <div className="space-y-5 pb-6">
-            <div className="space-y-1.5 pb-1">
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                Set Up Your Delivery Profile
-              </h2>
-              <p className="text-xs text-slate-500">
-                Please enter your delivery details once. Next time, enjoy 1-click checkout!
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveOnboarding} className="space-y-4 pt-1">
+            <form onSubmit={handleSaveOnboarding} className="space-y-4">
               {/* Full Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
