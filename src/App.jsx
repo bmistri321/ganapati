@@ -48,6 +48,88 @@ export function App() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [latestOrderInfo, setLatestOrderInfo] = useState(null);
 
+  // Helper to extract productId from current window.location
+  const getProductIdFromUrl = () => {
+    // 1. Check path: /product/:id or /p/:id
+    const pathname = window.location.pathname;
+    const pathMatch = pathname.match(/^\/(?:product|p)\/([^/?#]+)/i);
+    if (pathMatch && pathMatch[1]) {
+      return decodeURIComponent(pathMatch[1]);
+    }
+
+    // 2. Check query params: ?p=:id or ?product=:id
+    const params = new URLSearchParams(window.location.search);
+    const paramId = params.get('p') || params.get('product');
+    if (paramId) {
+      return paramId;
+    }
+
+    // 3. Check hash: #/product/:id or #product-:id
+    const hash = window.location.hash;
+    const hashMatch = hash.match(/#\/?(?:product|p)?\/?([^/?#]+)/i);
+    if (hashMatch && hashMatch[1]) {
+      return decodeURIComponent(hashMatch[1]);
+    }
+
+    return null;
+  };
+
+  // Sync product from URL when products list loads or changes
+  useEffect(() => {
+    if (products.length > 0) {
+      const urlProductId = getProductIdFromUrl();
+      if (urlProductId) {
+        const found = products.find((p) => String(p.id) === String(urlProductId));
+        if (found) {
+          setSelectedProduct(found);
+          document.title = `${found.title} — Ganapati Store`;
+        }
+      }
+    }
+  }, [products]);
+
+  // Handle Browser Back / Forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlProductId = getProductIdFromUrl();
+      if (urlProductId && products.length > 0) {
+        const found = products.find((p) => String(p.id) === String(urlProductId));
+        if (found) {
+          setSelectedProduct(found);
+          document.title = `${found.title} — Ganapati Store`;
+        } else {
+          setSelectedProduct(null);
+          document.title = 'Ganapati Store — Fresh Groceries & Daily Essentials';
+        }
+      } else {
+        setSelectedProduct(null);
+        document.title = 'Ganapati Store — Fresh Groceries & Daily Essentials';
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [products]);
+
+  // Handle selecting a product with clean URL update
+  const handleSelectProduct = (prod) => {
+    setSelectedProduct(prod);
+    if (prod) {
+      window.history.pushState({ productId: prod.id }, '', `/product/${prod.id}`);
+      document.title = `${prod.title} — Ganapati Store`;
+    } else {
+      window.history.pushState({}, '', '/');
+      document.title = 'Ganapati Store — Fresh Groceries & Daily Essentials';
+    }
+  };
+
+  // Handle navigating back to home
+  const handleBackToShop = () => {
+    setSelectedProduct(null);
+    window.history.pushState({}, '', '/');
+    document.title = 'Ganapati Store — Fresh Groceries & Daily Essentials';
+  };
+
   // Dynamically extract unique categories from actual products
   const dynamicCategories = useMemo(() => {
     const cats = new Set();
@@ -114,7 +196,7 @@ export function App() {
       <Navbar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onHomeClick={() => setSelectedProduct(null)}
+        onHomeClick={handleBackToShop}
       />
 
       {/* Main View: Full Product Detail Page OR Store Catalog */}
@@ -122,8 +204,8 @@ export function App() {
         <ProductDetailPage
           product={selectedProduct}
           allProducts={products}
-          onBack={() => setSelectedProduct(null)}
-          onSelectProduct={(p) => setSelectedProduct(p)}
+          onBack={handleBackToShop}
+          onSelectProduct={handleSelectProduct}
         />
       ) : (
         <>
