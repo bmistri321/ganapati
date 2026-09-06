@@ -76,6 +76,31 @@ export const LocationPicker = ({ coordinates, onChange, addressHint = '', label 
     };
   }, []);
 
+  // Automatically request browser GPS location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude.toFixed(6));
+        const lng = Number(position.coords.longitude.toFixed(6));
+
+        if (mapInstanceRef.current && markerRef.current) {
+          mapInstanceRef.current.setView([lat, lng], 16);
+          markerRef.current.setLatLng([lat, lng]);
+        }
+
+        onChange({ lat, lng });
+        setIsLocating(false);
+      },
+      () => {
+        setIsLocating(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  }, []);
+
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       setGeoError('Geolocation is not supported by your browser.');
