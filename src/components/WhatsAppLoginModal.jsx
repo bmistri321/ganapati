@@ -386,8 +386,8 @@ export const WhatsAppLoginModal = () => {
 
         {step === 'onboarding' && (
           /* Step 3: First-Time User Profile & Address Setup */
-          <div className="space-y-4 pt-1 sm:pt-0 overflow-y-auto max-h-[78vh] pr-1">
-            <div className="space-y-1">
+          <div className="space-y-5 pt-1 sm:pt-0 overflow-y-auto max-h-[78vh] pr-1">
+            <div className="space-y-1.5 pb-1">
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 Set Up Your Delivery Profile
               </h2>
@@ -396,7 +396,7 @@ export const WhatsAppLoginModal = () => {
               </p>
             </div>
 
-            <form onSubmit={handleSaveOnboarding} className="space-y-3.5">
+            <form onSubmit={handleSaveOnboarding} className="space-y-4 pt-1">
               {/* Full Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -499,7 +499,7 @@ export const WhatsAppLoginModal = () => {
               </div>
 
               {/* GPS Location Pin */}
-              <div>
+              <div className="pt-2">
                 <LocationPicker
                   coordinates={onboardingData.coordinates}
                   onChange={(coords) => setOnboardingData({ ...onboardingData, coordinates: coords })}
