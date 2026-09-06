@@ -29,6 +29,7 @@ import { CategoryShelf } from './components/CategoryShelf';
 import { WhatsAppLoginModal } from './components/WhatsAppLoginModal';
 import { MyOrdersModal } from './components/MyOrdersModal';
 import { CustomerProfileModal } from './components/CustomerProfileModal';
+import { fetchSingleProductById } from './services/supabaseStore';
 
 export function App() {
   const { settings } = useSettings();
@@ -50,40 +51,51 @@ export function App() {
 
   // Helper to extract productId from current window.location
   const getProductIdFromUrl = () => {
-    // 1. Check path: /product/:id or /p/:id
+    // 1. Check path: /product/:id or /p/:id (supports trailing slashes)
     const pathname = window.location.pathname;
-    const pathMatch = pathname.match(/^\/(?:product|p)\/([^/?#]+)/i);
+    const pathMatch = pathname.match(/\/(?:product|p)\/([^/?#]+)/i);
     if (pathMatch && pathMatch[1]) {
-      return decodeURIComponent(pathMatch[1]);
+      return decodeURIComponent(pathMatch[1]).replace(/\/+$/, '');
     }
 
     // 2. Check query params: ?p=:id or ?product=:id
     const params = new URLSearchParams(window.location.search);
     const paramId = params.get('p') || params.get('product');
     if (paramId) {
-      return paramId;
+      return decodeURIComponent(paramId).trim();
     }
 
     // 3. Check hash: #/product/:id or #product-:id
     const hash = window.location.hash;
     const hashMatch = hash.match(/#\/?(?:product|p)?\/?([^/?#]+)/i);
     if (hashMatch && hashMatch[1]) {
-      return decodeURIComponent(hashMatch[1]);
+      return decodeURIComponent(hashMatch[1]).replace(/\/+$/, '');
     }
 
     return null;
   };
 
+  // Instant Direct Deep-Link Resolution on Initial Mount
+  useEffect(() => {
+    const urlProductId = getProductIdFromUrl();
+    if (urlProductId) {
+      fetchSingleProductById(urlProductId).then((prod) => {
+        if (prod) {
+          setSelectedProduct(prod);
+          document.title = `${prod.title || prod.name} — Ganapati Store`;
+        }
+      });
+    }
+  }, []);
+
   // Sync product from URL when products list loads or changes
   useEffect(() => {
-    if (products.length > 0) {
-      const urlProductId = getProductIdFromUrl();
-      if (urlProductId) {
-        const found = products.find((p) => String(p.id) === String(urlProductId));
-        if (found) {
-          setSelectedProduct(found);
-          document.title = `${found.title} — Ganapati Store`;
-        }
+    const urlProductId = getProductIdFromUrl();
+    if (urlProductId && products.length > 0) {
+      const found = products.find((p) => String(p.id).toLowerCase() === String(urlProductId).toLowerCase());
+      if (found) {
+        setSelectedProduct(found);
+        document.title = `${found.title || found.name} — Ganapati Store`;
       }
     }
   }, [products]);
@@ -92,14 +104,21 @@ export function App() {
   useEffect(() => {
     const handlePopState = () => {
       const urlProductId = getProductIdFromUrl();
-      if (urlProductId && products.length > 0) {
-        const found = products.find((p) => String(p.id) === String(urlProductId));
+      if (urlProductId) {
+        const found = products.find((p) => String(p.id).toLowerCase() === String(urlProductId).toLowerCase());
         if (found) {
           setSelectedProduct(found);
-          document.title = `${found.title} — Ganapati Store`;
+          document.title = `${found.title || found.name} — Ganapati Store`;
         } else {
-          setSelectedProduct(null);
-          document.title = 'Ganapati Store — Fresh Groceries & Daily Essentials';
+          fetchSingleProductById(urlProductId).then((prod) => {
+            if (prod) {
+              setSelectedProduct(prod);
+              document.title = `${prod.title || prod.name} — Ganapati Store`;
+            } else {
+              setSelectedProduct(null);
+              document.title = 'Ganapati Store — Fresh Groceries & Daily Essentials';
+            }
+          });
         }
       } else {
         setSelectedProduct(null);
@@ -116,7 +135,7 @@ export function App() {
     setSelectedProduct(prod);
     if (prod) {
       window.history.pushState({ productId: prod.id }, '', `/product/${prod.id}`);
-      document.title = `${prod.title} — Ganapati Store`;
+      document.title = `${prod.title || prod.name} — Ganapati Store`;
     } else {
       window.history.pushState({}, '', '/');
       document.title = 'Ganapati Store — Fresh Groceries & Daily Essentials';

@@ -105,6 +105,83 @@ export async function fetchLiveProductsFromBackend() {
 }
 
 /**
+ * Fetch a single product directly by ID from Supabase
+ */
+export async function fetchSingleProductById(productId) {
+  if (!productId) return null;
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (!error && data) {
+      const p = data;
+      const rawPrice = parseFloat(p.price ?? p.selling_price ?? p.unit_price ?? 0);
+      const originalPrice = p.original_price ? parseFloat(p.original_price) : (p.mrp ? parseFloat(p.mrp) : null);
+      const rawStock = parseInt(p.stock_quantity ?? p.stock ?? 0, 10);
+      
+      let cleanVariants = [];
+      try {
+        const rawVariants = Array.isArray(p.variants) 
+          ? p.variants 
+          : (typeof p.variants === 'string' ? JSON.parse(p.variants || '[]') : []);
+        if (Array.isArray(rawVariants)) {
+          cleanVariants = rawVariants.map((v, idx) => ({
+            id: v.id || `var_${p.id}_${idx}`,
+            name: v.name || v.size || `Option ${idx + 1}`,
+            size: v.size || v.name || '',
+            sku: v.sku || `${p.sku || 'SKU'}-${idx + 1}`,
+            selling_price: parseFloat(v.selling_price ?? v.price ?? rawPrice),
+            cost_price: parseFloat(v.cost_price ?? 0),
+            stock_quantity: parseInt(v.stock_quantity ?? v.stock ?? 0, 10),
+            low_stock_threshold: parseInt(v.low_stock_threshold ?? 3, 10)
+          }));
+        }
+      } catch (e) {
+        console.warn('Error parsing variants', e);
+      }
+
+      const hasVariants = Boolean(p.has_variants) && cleanVariants.length > 0;
+      const minVariantPrice = hasVariants ? Math.min(...cleanVariants.map(v => v.selling_price)) : rawPrice;
+      const totalVariantStock = hasVariants ? cleanVariants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0) : rawStock;
+      const effectivePrice = isNaN(minVariantPrice) ? 0 : minVariantPrice;
+      const effectiveStock = isNaN(totalVariantStock) ? 0 : totalVariantStock;
+      const primaryImage = p.image_url || p.image || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null);
+
+      return {
+        id: p.id,
+        name: p.name || p.title || 'Product Item',
+        title: p.name || p.title || 'Product Item',
+        category: p.category || 'General',
+        price: effectivePrice,
+        selling_price: effectivePrice,
+        originalPrice: originalPrice && !isNaN(originalPrice) ? originalPrice : null,
+        rating: parseFloat(p.rating) || 4.9,
+        reviewsCount: parseInt(p.reviews_count ?? 48, 10),
+        stock: effectiveStock,
+        stock_quantity: effectiveStock,
+        badge: effectiveStock <= 3 && effectiveStock > 0 ? 'Low Stock' : (p.badge || (p.featured ? 'Featured' : null)),
+        image: primaryImage,
+        image_url: primaryImage,
+        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (primaryImage ? [primaryImage] : []),
+        description: p.description || `${p.name || 'Product'} - Real-time verified item from inventory.`,
+        features: Array.isArray(p.features) && p.features.length > 0 ? p.features : ['Verified Inventory Item', 'Direct WhatsApp Dispatch'],
+        has_variants: hasVariants,
+        hasVariants: hasVariants,
+        variants: cleanVariants,
+        unit: p.unit || p.weight || '',
+        sku: p.sku || ''
+      };
+    }
+  } catch (err) {
+    console.error('Error fetching product by ID from Supabase:', err);
+  }
+  return null;
+}
+
+/**
  * Fetch real store organization info from database
  */
 export async function fetchStoreInfoFromBackend() {
