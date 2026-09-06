@@ -314,7 +314,7 @@ export const CustomerProfileModal = () => {
 
       {/* Slide-Over Side Panel (100% Full Width on Mobile, Fixed sm:max-w-md Drawer on Desktop) */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
-        <div className="w-full sm:w-screen sm:max-w-md bg-[#F8F9FA] shadow-2xl flex flex-col animate-slide-left border-l border-slate-200 h-full overflow-hidden">
+        <div className="w-full sm:w-screen sm:max-w-md bg-white shadow-2xl flex flex-col animate-slide-left border-l border-slate-200 h-full overflow-hidden">
           
           {/* Panel Header */}
           <div className="p-4 sm:p-5 border-b border-slate-200/80 bg-white flex items-center justify-between flex-shrink-0">
@@ -728,7 +728,7 @@ export const CustomerProfileModal = () => {
 
                 {/* SUB-VIEW 2B: ADD / EDIT ADDRESS FORM WITH MAP */}
                 {(addressSubView === 'add' || addressSubView === 'edit') && (
-                  <form onSubmit={handleSaveAddressForm} className="space-y-4 animate-fade-in bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+                  <form onSubmit={handleSaveAddressForm} className="space-y-4 animate-fade-in pb-4">
                     {/* Address Tag Selector */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-semibold text-slate-700">
