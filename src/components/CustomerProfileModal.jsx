@@ -720,7 +720,7 @@ export const CustomerProfileModal = () => {
                       className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-2xl text-slate-800 text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer active:scale-98"
                     >
                       <Plus className="w-4 h-4 text-slate-700" />
-                      <span>+ Add New Address</span>
+                      <span>Add New Address</span>
                     </button>
 
                   </div>
