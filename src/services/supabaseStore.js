@@ -23,10 +23,46 @@ export async function fetchLiveProductsFromBackend() {
 
     if (!error && Array.isArray(data)) {
       return data.map((p) => {
-        const price = parseFloat(p.price ?? p.selling_price ?? p.unit_price ?? 0);
+        const rawPrice = parseFloat(p.price ?? p.selling_price ?? p.unit_price ?? 0);
         const originalPrice = p.original_price ? parseFloat(p.original_price) : (p.mrp ? parseFloat(p.mrp) : null);
-        const stock = parseInt(p.stock_quantity ?? p.stock ?? 0, 10);
+        const rawStock = parseInt(p.stock_quantity ?? p.stock ?? 0, 10);
         
+        // Parse and clean real variants array from XYVOT / Supabase
+        let cleanVariants = [];
+        try {
+          const rawVariants = Array.isArray(p.variants) 
+            ? p.variants 
+            : (typeof p.variants === 'string' ? JSON.parse(p.variants || '[]') : []);
+          
+          if (Array.isArray(rawVariants)) {
+            cleanVariants = rawVariants.map((v, idx) => ({
+              id: v.id || `var_${p.id}_${idx}`,
+              name: v.name || v.size || `Option ${idx + 1}`,
+              size: v.size || v.name || '',
+              sku: v.sku || `${p.sku || 'SKU'}-${idx + 1}`,
+              selling_price: parseFloat(v.selling_price ?? v.price ?? rawPrice),
+              cost_price: parseFloat(v.cost_price ?? 0),
+              stock_quantity: parseInt(v.stock_quantity ?? v.stock ?? 0, 10),
+              low_stock_threshold: parseInt(v.low_stock_threshold ?? 3, 10)
+            }));
+          }
+        } catch (e) {
+          console.warn('Error parsing variants for product', p.id, e);
+        }
+
+        const hasVariants = Boolean(p.has_variants) && cleanVariants.length > 0;
+        
+        // If hasVariants, compute base price and total stock dynamically
+        const minVariantPrice = hasVariants 
+          ? Math.min(...cleanVariants.map(v => v.selling_price)) 
+          : rawPrice;
+        const totalVariantStock = hasVariants
+          ? cleanVariants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0)
+          : rawStock;
+
+        const effectivePrice = isNaN(minVariantPrice) ? 0 : minVariantPrice;
+        const effectiveStock = isNaN(totalVariantStock) ? 0 : totalVariantStock;
+
         // Pure database image without any fake fallback URLs
         const primaryImage = p.image_url || p.image || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null);
         const imageList = Array.isArray(p.images) && p.images.length > 0 
@@ -37,18 +73,23 @@ export async function fetchLiveProductsFromBackend() {
           id: p.id,
           title: p.name || p.title || 'Product Item',
           category: p.category || 'General',
-          price: isNaN(price) ? 0 : price,
+          price: effectivePrice,
           originalPrice: originalPrice && !isNaN(originalPrice) ? originalPrice : null,
           rating: parseFloat(p.rating) || 4.9,
           reviewsCount: parseInt(p.reviews_count ?? 48, 10),
-          stock: isNaN(stock) ? 0 : stock,
-          badge: stock <= 3 && stock > 0 ? 'Low Stock' : (p.badge || (p.featured ? 'Featured' : null)),
+          stock: effectiveStock,
+          badge: effectiveStock <= 3 && effectiveStock > 0 ? 'Low Stock' : (p.badge || (p.featured ? 'Featured' : null)),
           image: primaryImage,
           images: imageList,
           description: p.description || `${p.name || 'Product'} - Real-time verified item from inventory.`,
           features: Array.isArray(p.features) && p.features.length > 0 
             ? p.features 
-            : ['Verified Inventory Item', 'Direct WhatsApp Dispatch']
+            : ['Verified Inventory Item', 'Direct WhatsApp Dispatch'],
+          // Real XYVOT Variant Fields
+          hasVariants: hasVariants,
+          variants: cleanVariants,
+          unit: p.unit || p.weight || '',
+          sku: p.sku || ''
         };
       });
     }

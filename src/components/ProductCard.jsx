@@ -73,10 +73,22 @@ export const ProductCard = ({ product, onSelectProduct }) => {
             {product.title}
           </h3>
 
-          {/* Unit / Weight / Category Info */}
-          <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-            {product.category || '1 unit'}
-          </p>
+          {/* Unit / Options / Category Info */}
+          <div className="flex items-center gap-1.5 mt-1">
+            {product.hasVariants && product.variants?.length > 0 ? (
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
+                {product.variants.length} options
+              </span>
+            ) : product.unit ? (
+              <span className="text-[11px] text-slate-500 font-medium truncate">
+                {product.unit}
+              </span>
+            ) : (
+              <span className="text-[11px] text-slate-500 font-medium truncate">
+                {product.category || 'Item'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Price & Add Stepper Row */}
@@ -84,7 +96,7 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           <div className="min-w-0">
             <div className="flex items-baseline gap-1">
               <span className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                {settings.currency}{product.price.toFixed(0)}
+                {product.hasVariants ? 'from ' : ''}{settings.currency}{product.price.toFixed(0)}
               </span>
               {product.originalPrice && (
                 <span className="text-[10px] text-slate-400 line-through">
@@ -95,7 +107,19 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           </div>
 
           {/* Blinkit-Style Green ADD / Stepper Button */}
-          {qtyInCart > 0 ? (
+          {product.hasVariants ? (
+            <button
+              onClick={() => onSelectProduct(product)}
+              disabled={isOutOfStock}
+              className={`px-3 py-1 sm:px-3.5 sm:py-1.5 rounded text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 border ${
+                isOutOfStock
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'
+                  : 'bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border-emerald-600 shadow-emerald-600/10'
+              }`}
+            >
+              <span>{isOutOfStock ? 'Out' : 'SELECT'}</span>
+            </button>
+          ) : qtyInCart > 0 ? (
             <div className="flex items-center border border-emerald-600 bg-emerald-600 text-white rounded overflow-hidden shadow-xs">
               <button
                 type="button"

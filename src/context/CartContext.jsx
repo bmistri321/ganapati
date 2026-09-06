@@ -27,24 +27,29 @@ export const CartProvider = ({ children }) => {
     }
   }, [cartItems]);
 
-  const addToCart = (product, quantity = 1) => {
-    if (product.stock <= 0) {
-      showToast(`Sorry, "${product.title}" is currently out of stock.`, 'warning');
+  const addToCart = (product, quantity = 1, selectedVariant = null) => {
+    const itemStock = selectedVariant ? (parseInt(selectedVariant.stock_quantity ?? selectedVariant.stock ?? 0, 10)) : (product.stock || 0);
+    const itemPrice = selectedVariant ? (parseFloat(selectedVariant.selling_price ?? selectedVariant.price ?? product.price)) : product.price;
+    const variantLabel = selectedVariant ? (selectedVariant.name || selectedVariant.size) : null;
+    const itemKey = selectedVariant ? `${product.id}_${selectedVariant.id}` : product.id;
+
+    if (itemStock <= 0) {
+      showToast(`Sorry, "${product.title}${variantLabel ? ` (${variantLabel})` : ''}" is out of stock.`, 'warning');
       return false;
     }
 
     let addedSuccessfully = false;
 
     setCartItems((prevItems) => {
-      const existingIndex = prevItems.findIndex((item) => item.id === product.id);
+      const existingIndex = prevItems.findIndex((item) => (item.cartItemId || item.id) === itemKey);
 
       if (existingIndex > -1) {
         const currentQty = prevItems[existingIndex].quantity;
         const newQty = currentQty + quantity;
 
-        if (newQty > product.stock) {
+        if (newQty > itemStock) {
           showToast(
-            `Stock limit reached: Only ${product.stock} units available for "${product.title}".`,
+            `Stock limit reached: Only ${itemStock} units available for "${product.title}${variantLabel ? ` (${variantLabel})` : ''}".`,
             'warning'
           );
           return prevItems;
@@ -58,30 +63,40 @@ export const CartProvider = ({ children }) => {
         addedSuccessfully = true;
         return updated;
       } else {
-        if (quantity > product.stock) {
+        if (quantity > itemStock) {
           showToast(
-            `Only ${product.stock} units available in stock.`,
+            `Only ${itemStock} units available in stock.`,
             'warning'
           );
           return prevItems;
         }
         addedSuccessfully = true;
-        return [...prevItems, { ...product, quantity }];
+        return [
+          ...prevItems, 
+          { 
+            ...product, 
+            cartItemId: itemKey,
+            price: itemPrice,
+            stock: itemStock,
+            selectedVariant: selectedVariant || null,
+            quantity 
+          }
+        ];
       }
     });
 
     if (addedSuccessfully) {
-      setJustAddedId(product.id);
+      setJustAddedId(itemKey);
       setTimeout(() => setJustAddedId(null), 1200);
-      showToast(`Added "${product.title}" to cart!`, 'success');
+      showToast(`Added "${product.title}${variantLabel ? ` (${variantLabel})` : ''}" to cart!`, 'success');
       return true;
     }
     return false;
   };
 
-  const updateQuantity = (productId, newQuantity, maxStock) => {
+  const updateQuantity = (cartItemId, newQuantity, maxStock) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartItemId);
       return;
     }
 
@@ -92,16 +107,17 @@ export const CartProvider = ({ children }) => {
 
     setCartItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === productId ? { ...item, quantity: newQuantity } : item
+        (item.cartItemId || item.id) === cartItemId ? { ...item, quantity: newQuantity } : item
       )
     );
   };
 
-  const removeFromCart = (productId) => {
-    const item = cartItems.find((i) => i.id === productId);
-    setCartItems((prevItems) => prevItems.filter((i) => i.id !== productId));
+  const removeFromCart = (cartItemId) => {
+    const item = cartItems.find((i) => (i.cartItemId || i.id) === cartItemId);
+    setCartItems((prevItems) => prevItems.filter((i) => (i.cartItemId || i.id) !== cartItemId));
     if (item) {
-      showToast(`Removed "${item.title}" from cart`, 'info');
+      const vLabel = item.selectedVariant ? ` (${item.selectedVariant.name || item.selectedVariant.size})` : '';
+      showToast(`Removed "${item.title}${vLabel}" from cart`, 'info');
     }
   };
 

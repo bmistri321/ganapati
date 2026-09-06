@@ -103,9 +103,11 @@ export function generateTaxInvoicePDF(order, storeSettings = {}) {
 
   items.forEach((item) => {
     doc.setTextColor(...darkColor);
-    doc.text(item.title || 'Product Item', 18, currentY);
+    const vLabel = item.selectedVariant ? ` (${item.selectedVariant.name || item.selectedVariant.size})` : (item.variant_name ? ` (${item.variant_name})` : '');
+    const fullTitle = (item.title || item.product_name || 'Product Item') + vLabel;
+    doc.text(fullTitle, 18, currentY);
     doc.text(String(item.quantity || 1), 120, currentY, { align: 'center' });
-    doc.text(`₹${Number(item.price || 0).toFixed(2)}`, 150, currentY, { align: 'right' });
+    doc.text(`₹${Number(item.price || item.unit_price || 0).toFixed(2)}`, 150, currentY, { align: 'right' });
     
     const lineTotal = Number(item.price || 0) * Number(item.quantity || 1);
     doc.text(`₹${lineTotal.toFixed(2)}`, 190, currentY, { align: 'right' });

@@ -114,7 +114,8 @@ export const formatWhatsAppMessage = (order, storeSettings = {}) => {
 
   order.items.forEach((item, index) => {
     const itemTotal = (item.price * item.quantity).toFixed(2);
-    msg += `${index + 1}. *${item.title}*\n`;
+    const vLabel = item.selectedVariant ? ` (${item.selectedVariant.name || item.selectedVariant.size})` : (item.variant_name ? ` (${item.variant_name})` : '');
+    msg += `${index + 1}. *${item.title || item.product_name || 'Product'}*${vLabel}\n`;
     msg += `   └ ${item.quantity} x ${currency}${item.price.toFixed(2)} = *${currency}${itemTotal}*\n`;
   });
 

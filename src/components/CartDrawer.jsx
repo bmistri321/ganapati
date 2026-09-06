@@ -126,10 +126,12 @@ export const CartDrawer = () => {
               </div>
             ) : (
               cartItems.map((item) => {
+                const itemKey = item.cartItemId || item.id;
                 const isMax = item.quantity >= item.stock;
+                const variantLabel = item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : null;
                 return (
                   <div
-                    key={item.id}
+                    key={itemKey}
                     className="flex gap-3.5 items-center"
                   >
                     {/* Thumbnail (100% Full Fill Edge-to-Edge) */}
@@ -153,15 +155,23 @@ export const CartDrawer = () => {
                             {item.title}
                           </h4>
                           <button
-                            onClick={() => removeFromCart(item.id)}
+                            onClick={() => removeFromCart(itemKey)}
                             className="text-slate-400 hover:text-rose-600 transition-colors p-1 flex-shrink-0 cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <p className="text-xs text-slate-500 font-medium">
-                          {settings.currency}{item.price.toFixed(2)} each
-                        </p>
+                        
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {variantLabel && (
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                              {variantLabel}
+                            </span>
+                          )}
+                          <p className="text-xs text-slate-500 font-medium">
+                            {settings.currency}{item.price.toFixed(2)} each
+                          </p>
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between mt-2.5">
@@ -169,7 +179,7 @@ export const CartDrawer = () => {
                         <div className="flex items-center border border-slate-200 rounded-xl bg-white px-1.5 py-0.5">
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.stock)}
+                            onClick={() => updateQuantity(itemKey, item.quantity - 1, item.stock)}
                             disabled={item.quantity <= 1}
                             className="p-1 text-slate-600 hover:text-slate-900 disabled:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                             title={item.quantity <= 1 ? "Use trash button to remove item" : "Decrease quantity"}
@@ -181,7 +191,7 @@ export const CartDrawer = () => {
                           </span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)}
+                            onClick={() => updateQuantity(itemKey, item.quantity + 1, item.stock)}
                             disabled={isMax}
                             className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                           >

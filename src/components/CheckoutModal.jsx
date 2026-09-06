@@ -132,13 +132,19 @@ export const CheckoutModal = ({ onOrderSuccess }) => {
         total_amount: grandTotal,
         subtotal: subtotal,
         deliveryFee: deliveryFee,
-        items: cartItems.map((item) => ({
-          id: item.id,
-          product_name: item.title || item.name,
-          quantity: item.quantity,
-          unit_price: item.price,
-          image: item.image
-        }))
+        items: cartItems.map((item) => {
+          const vLabel = item.selectedVariant ? (item.selectedVariant.name || item.selectedVariant.size) : null;
+          return {
+            id: item.id,
+            variant_id: item.selectedVariant?.id || null,
+            sku: item.selectedVariant?.sku || item.sku || null,
+            variant_name: vLabel,
+            product_name: vLabel ? `${item.title || item.name} (${vLabel})` : (item.title || item.name),
+            quantity: item.quantity,
+            unit_price: item.price,
+            image: item.image
+          };
+        })
       };
 
       // Call submitStoreApiOrder with STORE_API_KEY

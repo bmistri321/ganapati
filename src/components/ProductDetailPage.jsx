@@ -18,15 +18,21 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
   const { settings } = useSettings();
   const [selectedImage, setSelectedImage] = useState(product?.image || '');
   const [quantity, setQuantity] = useState(1);
-  const [selectedWeight, setSelectedWeight] = useState('500 g');
   const [activeTab, setActiveTab] = useState('reviews'); // 'reviews' | 'description'
 
-  // Scroll to top when product changes
+  // Real XYVOT variants
+  const variants = product?.variants || [];
+  const hasRealVariants = Boolean(product?.hasVariants && variants.length > 0);
+  const [selectedVariant, setSelectedVariant] = useState(hasRealVariants ? variants[0] : null);
+
+  // Scroll to top when product changes & sync active variant
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (product) {
       setSelectedImage(product.image || '');
       setQuantity(1);
+      const prodVariants = product.variants || [];
+      setSelectedVariant(product.hasVariants && prodVariants.length > 0 ? prodVariants[0] : null);
     }
   }, [product]);
 
@@ -35,8 +41,12 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
   const validImages = (product.images || [product.image]).filter(Boolean);
   if (validImages.length === 0 && product.image) validImages.push(product.image);
 
-  // Weight options (dynamic fallback)
-  const weightOptions = ['500 g', '1 Kg', '2 Kg', '5 Kg'];
+  // Active pricing & stock calculation
+  const currentPrice = selectedVariant ? selectedVariant.selling_price : product.price;
+  const currentStock = selectedVariant ? selectedVariant.stock_quantity : product.stock;
+  const currentSku = selectedVariant ? (selectedVariant.sku || product.sku) : product.sku;
+  const isOutOfStock = currentStock <= 0;
+  const isLowStock = currentStock > 0 && currentStock <= (selectedVariant?.low_stock_threshold || 3);
 
   // Similar products from same category
   const similarProducts = allProducts
@@ -50,11 +60,11 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
     : similarProducts;
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    addToCart(product, quantity, selectedVariant);
   };
 
   const handleBuyNow = () => {
-    const success = addToCart(product, quantity);
+    const success = addToCart(product, quantity, selectedVariant);
     if (success) {
       setIsCheckoutOpen(true);
     }
@@ -143,19 +153,34 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
                 {product.title}
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                In Stock
-              </span>
+              {isOutOfStock ? (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                  Out of Stock
+                </span>
+              ) : isLowStock ? (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  Only {currentStock} left
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {currentStock} In Stock
+                </span>
+              )}
             </div>
 
             {/* Price Row */}
             <div className="flex items-baseline gap-3">
               <span className="text-2xl sm:text-3xl font-bold text-slate-900">
-                {settings.currency}{product.price.toFixed(2)}
+                {settings.currency}{currentPrice.toFixed(2)}
               </span>
               {product.originalPrice && (
                 <span className="text-base text-slate-400 line-through font-normal">
                   {settings.currency}{product.originalPrice.toFixed(2)}
+                </span>
+              )}
+              {currentSku && (
+                <span className="text-xs text-slate-400 font-mono ml-auto">
+                  SKU: {currentSku}
                 </span>
               )}
             </div>
@@ -165,28 +190,53 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
               {product.description || 'Premium quality freshly sourced produce, packed with care and delivered directly to your doorstep with Cash on Delivery.'}
             </p>
 
-            {/* Weight / Variant Selector */}
-            <div className="space-y-2.5 pt-2">
-              <label className="block text-xs font-semibold text-slate-900">
-                Weight
-              </label>
-              <div className="flex flex-wrap gap-2.5">
-                {weightOptions.map((weight) => (
-                  <button
-                    key={weight}
-                    type="button"
-                    onClick={() => setSelectedWeight(weight)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                      selectedWeight === weight
-                        ? 'bg-[#15803d] text-white shadow-xs'
-                        : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {weight}
-                  </button>
-                ))}
+            {/* Real XYVOT Variant Selector (Rendered ONLY if product has variants) */}
+            {hasRealVariants && (
+              <div className="space-y-2.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-900">
+                    Select Option / Size
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    {variants.length} options available
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {variants.map((v) => {
+                    const isVSelected = selectedVariant?.id === v.id;
+                    const isVOutOfStock = (v.stock_quantity || 0) <= 0;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVariant(v)}
+                        className={`px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-2 ${
+                          isVSelected
+                            ? 'bg-[#15803d] text-white shadow-xs'
+                            : isVOutOfStock
+                            ? 'border border-slate-200 text-slate-400 bg-slate-50 line-through'
+                            : 'border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="font-bold">{v.name || v.size}</span>
+                        <span className={`text-[11px] ${isVSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
+                          &bull; {settings.currency}{v.selling_price.toFixed(0)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Single Product Unit / Pack Size if available and no variants */}
+            {!hasRealVariants && product.unit && (
+              <div className="pt-1">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">
+                  Pack Size: <strong className="text-slate-900">{product.unit}</strong>
+                </span>
+              </div>
+            )}
 
             {/* Quantity Stepper & Action Buttons */}
             <div className="pt-3 flex flex-wrap items-center gap-3 sm:gap-4">
@@ -196,7 +246,7 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
+                  disabled={quantity <= 1 || isOutOfStock}
                   className="w-7 h-7 flex items-center justify-center text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
                 >
                   <Minus className="w-3.5 h-3.5" />
@@ -206,8 +256,9 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
                 </span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="w-7 h-7 flex items-center justify-center text-slate-600 hover:text-slate-900 cursor-pointer"
+                  onClick={() => setQuantity((q) => Math.min(currentStock, q + 1))}
+                  disabled={quantity >= currentStock || isOutOfStock}
+                  className="w-7 h-7 flex items-center justify-center text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -217,9 +268,10 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="inline-flex items-center justify-center gap-2 bg-[#15803d] hover:bg-[#166534] text-white font-medium px-6 sm:px-8 py-3.5 rounded-full text-xs sm:text-sm transition-all shadow-xs active:scale-98 cursor-pointer h-12"
+                disabled={isOutOfStock}
+                className="inline-flex items-center justify-center gap-2 bg-[#15803d] hover:bg-[#166534] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-medium px-6 sm:px-8 py-3.5 rounded-full text-xs sm:text-sm transition-all shadow-xs active:scale-98 cursor-pointer h-12"
               >
-                <span>Add to cart</span>
+                <span>{isOutOfStock ? 'Out of stock' : 'Add to cart'}</span>
                 <ShoppingCart className="w-4 h-4" />
               </button>
 
@@ -227,7 +279,8 @@ export const ProductDetailPage = ({ product, allProducts, onBack, onSelectProduc
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="inline-flex items-center justify-center bg-[#f59e0b] hover:bg-[#d97706] text-slate-900 font-semibold px-6 sm:px-8 py-3.5 rounded-full text-xs sm:text-sm transition-all shadow-xs active:scale-98 cursor-pointer h-12"
+                disabled={isOutOfStock}
+                className="inline-flex items-center justify-center bg-[#f59e0b] hover:bg-[#d97706] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-900 font-semibold px-6 sm:px-8 py-3.5 rounded-full text-xs sm:text-sm transition-all shadow-xs active:scale-98 cursor-pointer h-12"
               >
                 <span>Buy now</span>
               </button>
