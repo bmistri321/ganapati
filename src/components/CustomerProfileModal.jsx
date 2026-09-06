@@ -15,13 +15,21 @@ import {
   FileCheck2, 
   LogOut, 
   Pencil, 
-  ArrowLeft
+  ArrowLeft,
+  Plus,
+  Home,
+  Briefcase,
+  Trash2,
+  CheckCircle2,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useSettings } from '../context/SettingsContext';
 import { LocationPicker } from './LocationPicker';
 import { upsertStoreCustomerProfile } from '../services/supabase';
+
+const SAVED_ADDRESSES_STORAGE_KEY = 'customer_saved_addresses';
 
 export const CustomerProfileModal = () => {
   const { isProfileOpen, setIsProfileOpen, currentCustomer, customer, updateProfile, setIsOrdersOpen, logout } = useAuth();
@@ -30,37 +38,75 @@ export const CustomerProfileModal = () => {
 
   const activeCustomer = currentCustomer || customer;
 
-  // View state: 'hub' (iOS grouped card menu) | 'address' (Address & GPS editor) | 'privacy' | 'terms' | 'help'
+  // View state: 'hub' (iOS grouped card menu) | 'address' (Address Book) | 'privacy' | 'terms' | 'help'
   const [activeTab, setActiveTab] = useState('hub');
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [gpsCoords, setGpsCoords] = useState({ lat: 28.6139, lng: 77.2090 });
+  // Address subview state: 'list' (Saved addresses cards) | 'add' (Add new address) | 'edit' (Edit address)
+  const [addressSubView, setAddressSubView] = useState('list');
+  const [editingAddressId, setEditingAddressId] = useState(null);
+
+  // Address List State
+  const [savedAddresses, setSavedAddresses] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SAVED_ADDRESSES_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+
+    return [
+      {
+        id: 'addr-default',
+        tag: 'Home',
+        name: activeCustomer?.fullName || activeCustomer?.name || 'Bishal Mistri',
+        phone: activeCustomer?.phone || '9876543210',
+        address: activeCustomer?.address || activeCustomer?.shippingAddress?.street || 'Station Road, 4no Gali, Habra',
+        city: activeCustomer?.city || activeCustomer?.shippingAddress?.city || 'Habra / Ashoknagar',
+        state: activeCustomer?.state || activeCustomer?.shippingAddress?.state || 'West Bengal',
+        postalCode: activeCustomer?.postalCode || activeCustomer?.shippingAddress?.postalCode || '743263',
+        gpsCoords: {
+          lat: activeCustomer?.gpsLat || activeCustomer?.shippingAddress?.coordinates?.lat || 22.8291,
+          lng: activeCustomer?.gpsLng || activeCustomer?.shippingAddress?.coordinates?.lng || 88.6148
+        },
+        isDefault: true
+      }
+    ];
+  });
+
+  // Active form state for Add/Edit
+  const [formTag, setFormTag] = useState('Home');
+  const [formName, setFormName] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formAddress, setFormAddress] = useState('');
+  const [formCity, setFormCity] = useState('Habra / Ashoknagar');
+  const [formState, setFormState] = useState('West Bengal');
+  const [formPostalCode, setFormPostalCode] = useState('743263');
+  const [formGpsCoords, setFormGpsCoords] = useState({ lat: 22.8291, lng: 88.6148 });
+  const [formIsDefault, setFormIsDefault] = useState(true);
   const [isLocating, setIsLocating] = useState(false);
 
+  // Synchronize initial default address if customer updates
   useEffect(() => {
-    if (activeCustomer) {
-      setName(activeCustomer.fullName || activeCustomer.name || '');
-      setEmail(activeCustomer.email || '');
-      setAddress(activeCustomer.address || activeCustomer.shippingAddress?.street || '');
-      setCity(activeCustomer.city || activeCustomer.shippingAddress?.city || '');
-      setState(activeCustomer.state || activeCustomer.shippingAddress?.state || '');
-      setPostalCode(activeCustomer.postalCode || activeCustomer.shippingAddress?.postalCode || '');
-      setGpsCoords({
-        lat: activeCustomer.gpsLat || activeCustomer.shippingAddress?.coordinates?.lat || 28.6139,
-        lng: activeCustomer.gpsLng || activeCustomer.shippingAddress?.coordinates?.lng || 77.2090
-      });
+    if (activeCustomer && savedAddresses.length > 0) {
+      const hasMatchingDefault = savedAddresses.some(a => a.isDefault);
+      if (!hasMatchingDefault) {
+        const updated = [...savedAddresses];
+        updated[0].isDefault = true;
+        setSavedAddresses(updated);
+        localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(updated));
+      }
     }
-  }, [activeCustomer, isProfileOpen]);
+  }, [activeCustomer]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isProfileOpen) {
-        if (activeTab !== 'hub') {
+        if (activeTab === 'address' && addressSubView !== 'list') {
+          setAddressSubView('list');
+          setEditingAddressId(null);
+        } else if (activeTab !== 'hub') {
           setActiveTab('hub');
         } else {
           setIsProfileOpen(false);
@@ -69,13 +115,48 @@ export const CustomerProfileModal = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isProfileOpen, setIsProfileOpen, activeTab]);
+  }, [isProfileOpen, setIsProfileOpen, activeTab, addressSubView]);
 
   if (!isProfileOpen) return null;
 
   const closeModal = () => {
     setIsProfileOpen(false);
     setActiveTab('hub');
+    setAddressSubView('list');
+    setEditingAddressId(null);
+  };
+
+  // Sync default address with Profile & Supabase
+  const syncDefaultAddressToProfile = async (defaultAddr) => {
+    try {
+      await upsertStoreCustomerProfile({
+        phone: activeCustomer?.phone || defaultAddr.phone || '',
+        fullName: defaultAddr.name,
+        name: defaultAddr.name,
+        email: formEmail || activeCustomer?.email || '',
+        address: defaultAddr.address,
+        city: defaultAddr.city,
+        state: defaultAddr.state,
+        postalCode: defaultAddr.postalCode,
+        gpsLat: defaultAddr.gpsCoords?.lat || 22.8291,
+        gpsLng: defaultAddr.gpsCoords?.lng || 88.6148
+      });
+
+      if (updateProfile) {
+        updateProfile({
+          fullName: defaultAddr.name,
+          name: defaultAddr.name,
+          email: formEmail || activeCustomer?.email || '',
+          address: defaultAddr.address,
+          city: defaultAddr.city,
+          state: defaultAddr.state,
+          postalCode: defaultAddr.postalCode,
+          coordinates: defaultAddr.gpsCoords
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to sync profile', err);
+    }
   };
 
   // 📍 Use Current GPS Location handler
@@ -92,7 +173,7 @@ export const CustomerProfileModal = () => {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude
         };
-        setGpsCoords(coords);
+        setFormGpsCoords(coords);
         setIsLocating(false);
         showToast(`📍 GPS Captured: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`, 'success');
       },
@@ -104,50 +185,142 @@ export const CustomerProfileModal = () => {
     );
   };
 
-  // Save profile to Supabase & localStorage
-  const handleSaveProfile = async (e) => {
+  // Switch to "Add New Address" mode
+  const handleOpenAddAddress = () => {
+    setFormTag('Home');
+    setFormName(activeCustomer?.fullName || activeCustomer?.name || '');
+    setFormPhone(activeCustomer?.phone || '');
+    setFormEmail(activeCustomer?.email || '');
+    setFormAddress('');
+    setFormCity('Habra / Ashoknagar');
+    setFormState('West Bengal');
+    setFormPostalCode('743263');
+    setFormGpsCoords({
+      lat: activeCustomer?.gpsLat || 22.8291,
+      lng: activeCustomer?.gpsLng || 88.6148
+    });
+    setFormIsDefault(savedAddresses.length === 0);
+    setEditingAddressId(null);
+    setAddressSubView('add');
+  };
+
+  // Switch to "Edit Address" mode
+  const handleOpenEditAddress = (addr) => {
+    setFormTag(addr.tag || 'Home');
+    setFormName(addr.name || '');
+    setFormPhone(addr.phone || activeCustomer?.phone || '');
+    setFormEmail(activeCustomer?.email || '');
+    setFormAddress(addr.address || '');
+    setFormCity(addr.city || 'Habra / Ashoknagar');
+    setFormState(addr.state || 'West Bengal');
+    setFormPostalCode(addr.postalCode || '743263');
+    setFormGpsCoords(addr.gpsCoords || { lat: 22.8291, lng: 88.6148 });
+    setFormIsDefault(Boolean(addr.isDefault));
+    setEditingAddressId(addr.id);
+    setAddressSubView('edit');
+  };
+
+  // Mark an address as Default
+  const handleSetDefaultAddress = (id) => {
+    const updated = savedAddresses.map((item) => ({
+      ...item,
+      isDefault: item.id === id
+    }));
+    setSavedAddresses(updated);
+    localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(updated));
+
+    const newDefault = updated.find((item) => item.id === id);
+    if (newDefault) {
+      syncDefaultAddressToProfile(newDefault);
+      showToast(`"${newDefault.tag || 'Address'}" marked as default delivery address!`, 'success');
+    }
+  };
+
+  // Delete an address
+  const handleDeleteAddress = (id, e) => {
+    e?.stopPropagation();
+    if (savedAddresses.length <= 1) {
+      showToast('You must keep at least one saved delivery address', 'warning');
+      return;
+    }
+    const toDelete = savedAddresses.find(a => a.id === id);
+    const remaining = savedAddresses.filter(a => a.id !== id);
+    if (toDelete?.isDefault && remaining.length > 0) {
+      remaining[0].isDefault = true;
+      syncDefaultAddressToProfile(remaining[0]);
+    }
+    setSavedAddresses(remaining);
+    localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(remaining));
+    showToast('Address removed from address book', 'info');
+  };
+
+  // Save address from form (Add or Edit)
+  const handleSaveAddressForm = async (e) => {
     e?.preventDefault();
-    if (!name.trim()) {
-      showToast('Please enter your full name', 'warning');
+    if (!formName.trim()) {
+      showToast('Please enter the recipient full name', 'warning');
+      return;
+    }
+    if (!formAddress.trim()) {
+      showToast('Please enter the delivery street address / flat', 'warning');
       return;
     }
 
-    try {
-      await upsertStoreCustomerProfile({
-        phone: activeCustomer?.phone || '',
-        fullName: name,
-        name: name,
-        email: email,
-        address: address,
-        city: city,
-        state: state,
-        postalCode: postalCode,
-        gpsLat: gpsCoords.lat,
-        gpsLng: gpsCoords.lng
+    const addressPayload = {
+      id: editingAddressId || `addr-${Date.now()}`,
+      tag: formTag || 'Home',
+      name: formName.trim(),
+      phone: formPhone.trim() || activeCustomer?.phone || '',
+      address: formAddress.trim(),
+      city: formCity.trim() || 'Habra / Ashoknagar',
+      state: formState.trim() || 'West Bengal',
+      postalCode: formPostalCode.trim() || '743263',
+      gpsCoords: formGpsCoords,
+      isDefault: savedAddresses.length === 0 ? true : formIsDefault
+    };
+
+    let updatedList = [];
+    if (editingAddressId) {
+      updatedList = savedAddresses.map((item) => {
+        if (item.id === editingAddressId) {
+          return addressPayload;
+        }
+        return addressPayload.isDefault ? { ...item, isDefault: false } : item;
       });
-
-      if (updateProfile) {
-        updateProfile({
-          fullName: name,
-          name: name,
-          email: email,
-          address: address,
-          city: city,
-          state: state,
-          postalCode: postalCode,
-          coordinates: gpsCoords
-        });
+    } else {
+      if (addressPayload.isDefault) {
+        updatedList = [
+          addressPayload,
+          ...savedAddresses.map((item) => ({ ...item, isDefault: false }))
+        ];
+      } else {
+        updatedList = [...savedAddresses, addressPayload];
       }
-
-      showToast('Address & GPS delivery location saved successfully!', 'success');
-      setActiveTab('hub');
-    } catch (err) {
-      showToast('Failed to save profile', 'error');
     }
+
+    // Ensure at least one is default
+    if (!updatedList.some(a => a.isDefault) && updatedList.length > 0) {
+      updatedList[0].isDefault = true;
+    }
+
+    setSavedAddresses(updatedList);
+    localStorage.setItem(SAVED_ADDRESSES_STORAGE_KEY, JSON.stringify(updatedList));
+
+    if (addressPayload.isDefault) {
+      await syncDefaultAddressToProfile(addressPayload);
+    }
+
+    showToast(
+      editingAddressId ? 'Address updated successfully!' : 'New address saved to your address book!',
+      'success'
+    );
+    setAddressSubView('list');
+    setEditingAddressId(null);
   };
 
   const displayName = activeCustomer?.fullName || activeCustomer?.name || 'Customer';
   const displayPhone = activeCustomer?.phone ? `+91 ${activeCustomer.phone}` : '+91 98765 43210';
+  const defaultAddressObj = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -157,7 +330,7 @@ export const CustomerProfileModal = () => {
         onClick={closeModal}
       />
 
-      {/* Slide-Over Side Panel (100% Full Width on Mobile, Fixed Drawer on Desktop) */}
+      {/* Slide-Over Side Panel (100% Full Width on Mobile, Fixed sm:max-w-md Drawer on Desktop) */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 w-full sm:w-auto">
         <div className="w-full sm:w-screen sm:max-w-md bg-[#F8F9FA] shadow-2xl flex flex-col animate-slide-left border-l border-slate-200 h-full overflow-hidden">
           
@@ -167,15 +340,29 @@ export const CustomerProfileModal = () => {
               {activeTab !== 'hub' && (
                 <button
                   type="button"
-                  onClick={() => setActiveTab('hub')}
+                  onClick={() => {
+                    if (activeTab === 'address' && addressSubView !== 'list') {
+                      setAddressSubView('list');
+                      setEditingAddressId(null);
+                    } else {
+                      setActiveTab('hub');
+                    }
+                  }}
                   className="p-1.5 -ml-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+                  title="Go Back"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               )}
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                 {activeTab === 'hub' && 'Profile'}
-                {activeTab === 'address' && 'Address Book'}
+                {activeTab === 'address' && (
+                  addressSubView === 'list' 
+                    ? 'Address Book' 
+                    : addressSubView === 'add' 
+                      ? 'Add New Address' 
+                      : 'Edit Address'
+                )}
                 {activeTab === 'help' && 'Get Help & FAQs'}
                 {activeTab === 'privacy' && 'Privacy Policy'}
                 {activeTab === 'terms' && 'Terms & Conditions'}
@@ -221,8 +408,11 @@ export const CustomerProfileModal = () => {
 
                   <button
                     type="button"
-                    onClick={() => setActiveTab('address')}
-                    title="Edit Address & Profile"
+                    onClick={() => {
+                      setActiveTab('address');
+                      setAddressSubView('list');
+                    }}
+                    title="View Address Book"
                     className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-800 transition-colors cursor-pointer"
                   >
                     <Pencil className="w-4 h-4" />
@@ -235,7 +425,10 @@ export const CustomerProfileModal = () => {
                   {/* Address Book */}
                   <button
                     type="button"
-                    onClick={() => setActiveTab('address')}
+                    onClick={() => {
+                      setActiveTab('address');
+                      setAddressSubView('list');
+                    }}
                     className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors text-left group cursor-pointer"
                   >
                     <div className="flex items-center gap-3.5">
@@ -243,9 +436,14 @@ export const CustomerProfileModal = () => {
                         <MapPin className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Address Book</p>
-                        <p className="text-[11px] text-slate-400">
-                          {address ? `${address.slice(0, 32)}...` : 'Manage your saved addresses & GPS'}
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-900">Address Book</p>
+                          <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-md">
+                            {savedAddresses.length}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate max-w-[220px]">
+                          {defaultAddressObj?.address ? `${defaultAddressObj.address.slice(0, 30)}...` : 'Manage your delivery addresses'}
                         </p>
                       </div>
                     </div>
@@ -404,158 +602,362 @@ export const CustomerProfileModal = () => {
               </div>
             )}
 
-            {/* ===================== VIEW 2: ADDRESS BOOK & GPS LOCATION ===================== */}
+            {/* ===================== VIEW 2: ADDRESS BOOK (LIST & ADD/EDIT) ===================== */}
             {activeTab === 'address' && (
-              <form onSubmit={handleSaveProfile} className="space-y-4 animate-fade-in bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+              <div className="space-y-4 animate-fade-in">
                 
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Recipient Information
-                  </h3>
+                {/* SUB-VIEW 2A: SAVED ADDRESSES LIST (GIST INFO) */}
+                {addressSubView === 'list' && (
+                  <div className="space-y-3.5">
+                    
+                    {/* List Header Info & Add Button */}
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                          Saved Addresses
+                        </p>
+                        <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                          {savedAddresses.length}
+                        </span>
+                      </div>
 
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Oliva"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
-                        required
-                      />
+                      <button
+                        type="button"
+                        onClick={handleOpenAddAddress}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Address</span>
+                      </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Address Cards List */}
+                    <div className="space-y-3">
+                      {savedAddresses.map((addr) => {
+                        const isDefault = Boolean(addr.isDefault);
+                        return (
+                          <div
+                            key={addr.id}
+                            className={`bg-white rounded-2xl p-4 border transition-all ${
+                              isDefault 
+                                ? 'border-emerald-500/40 ring-2 ring-emerald-500/10 shadow-xs' 
+                                : 'border-slate-200/80 hover:border-slate-300 shadow-xs'
+                            }`}
+                          >
+                            {/* Card Top Row: Tag & Default Badge / Button */}
+                            <div className="flex items-center justify-between gap-2 mb-2.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200/60">
+                                  {addr.tag === 'Home' && <Home className="w-3 h-3 text-slate-600" />}
+                                  {addr.tag === 'Work' && <Briefcase className="w-3 h-3 text-slate-600" />}
+                                  {addr.tag !== 'Home' && addr.tag !== 'Work' && <MapPin className="w-3 h-3 text-slate-600" />}
+                                  <span>{addr.tag || 'Home'}</span>
+                                </span>
+
+                                {isDefault && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                                    <span>Default Address</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {!isDefault && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetDefaultAddress(addr.id)}
+                                  className="text-[11px] font-semibold text-slate-500 hover:text-emerald-700 underline underline-offset-2 transition-colors cursor-pointer"
+                                >
+                                  Make Default
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Recipient & Contact */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-bold text-slate-900">
+                                  {addr.name || displayName}
+                                </h4>
+                                {addr.phone && (
+                                  <span className="text-xs text-slate-500 font-mono">
+                                    +91 {addr.phone.replace(/\D/g, '').slice(-10)}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Gist Info: Street, City, State, Pincode */}
+                              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                                {addr.address}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {addr.city || 'Habra / Ashoknagar'}, {addr.state || 'West Bengal'} - <span className="font-mono font-medium">{addr.postalCode || '743263'}</span>
+                              </p>
+
+                              {/* GPS Coordinates Pill */}
+                              {addr.gpsCoords && (
+                                <div className="pt-1.5 flex items-center gap-1 text-[10px] font-mono text-slate-400">
+                                  <MapPin className="w-3 h-3 text-emerald-600" />
+                                  <span>GPS: {Number(addr.gpsCoords.lat).toFixed(4)}, {Number(addr.gpsCoords.lng).toFixed(4)}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Card Footer Actions */}
+                            <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditAddress(addr)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Edit Address</span>
+                              </button>
+
+                              {savedAddresses.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteAddress(addr.id, e)}
+                                  className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                  title="Delete Address"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Prominent Add New Address Bottom Button */}
+                    <button
+                      type="button"
+                      onClick={handleOpenAddAddress}
+                      className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-2xl text-slate-800 text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer active:scale-98"
+                    >
+                      <Plus className="w-4 h-4 text-slate-700" />
+                      <span>+ Add New Address</span>
+                    </button>
+
+                  </div>
+                )}
+
+                {/* SUB-VIEW 2B: ADD / EDIT ADDRESS FORM WITH MAP */}
+                {(addressSubView === 'add' || addressSubView === 'edit') && (
+                  <form onSubmit={handleSaveAddressForm} className="space-y-4 animate-fade-in bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+                    
+                    {/* Header with Back button */}
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">
+                          {addressSubView === 'add' ? 'Add New Delivery Address' : 'Edit Delivery Address'}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Enter your recipient details and pinpoint on the map
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddressSubView('list');
+                          setEditingAddressId(null);
+                        }}
+                        className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    {/* Address Tag Selector */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Address Type
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {['Home', 'Work', 'Other'].map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => setFormTag(tag)}
+                            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                              formTag === tag
+                                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                                : 'bg-[#F4F5F7] text-slate-700 border-transparent hover:bg-slate-200/80'
+                            }`}
+                          >
+                            {tag === 'Home' && <Home className="w-3.5 h-3.5" />}
+                            {tag === 'Work' && <Briefcase className="w-3.5 h-3.5" />}
+                            {tag === 'Other' && <MapPin className="w-3.5 h-3.5" />}
+                            <span>{tag}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Recipient Details */}
+                    <div className="space-y-3 pt-2">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          WhatsApp Phone
+                          Full Name *
                         </label>
                         <input
                           type="text"
-                          value={activeCustomer?.phone ? `+91 ${activeCustomer.phone}` : '+91 '}
-                          disabled
-                          className="w-full px-3.5 py-2.5 text-xs font-mono font-medium rounded-xl bg-slate-100 text-slate-500 cursor-not-allowed border border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Email Address
-                        </label>
-                        <input
-                          type="email"
-                          placeholder="oliva@example.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="e.g. Bishal Mistri"
+                          value={formName}
+                          onChange={(e) => setFormName(e.target.value)}
                           className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                          required
                         />
                       </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            WhatsApp Phone
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="9876543210"
+                            value={formPhone}
+                            onChange={(e) => setFormPhone(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Email Address
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="oliva@example.com"
+                            value={formEmail}
+                            onChange={(e) => setFormEmail(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Delivery Address Details */}
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Delivery Address
-                    </h3>
+                    {/* Delivery Address & GPS Details */}
+                    <div className="space-y-3 pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          Street Address / Flat / Building *
+                        </label>
 
-                    {/* 📍 Use Current GPS Location Button */}
-                    <button
-                      type="button"
-                      onClick={handleGetGpsLocation}
-                      disabled={isLocating}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white text-[11px] font-semibold transition-all active:scale-95 cursor-pointer shadow-xs"
-                    >
-                      <Navigation className={`w-3 h-3 ${isLocating ? 'animate-spin' : ''}`} />
-                      <span>{isLocating ? 'Locating...' : '📍 Use Current GPS'}</span>
-                    </button>
-                  </div>
+                        {/* 📍 Use Current GPS Location Button */}
+                        <button
+                          type="button"
+                          onClick={handleGetGpsLocation}
+                          disabled={isLocating}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 hover:bg-black text-white text-[11px] font-semibold transition-all active:scale-95 cursor-pointer shadow-xs"
+                        >
+                          <Navigation className={`w-3 h-3 ${isLocating ? 'animate-spin' : ''}`} />
+                          <span>{isLocating ? 'Locating...' : '📍 Use Current GPS'}</span>
+                        </button>
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Street Address / Flat / Building
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 402 Green Meadows, 5th Main Road"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
                       <input
                         type="text"
-                        placeholder="Mumbai"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="e.g. Station Road, 4no Gali, Near City Hospital"
+                        value={formAddress}
+                        onChange={(e) => setFormAddress(e.target.value)}
                         className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                        required
                       />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
+                          <input
+                            type="text"
+                            placeholder="Habra / Ashoknagar"
+                            value={formCity}
+                            onChange={(e) => setFormCity(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
+                          <input
+                            type="text"
+                            placeholder="West Bengal"
+                            value={formState}
+                            onChange={(e) => setFormState(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
+                          <input
+                            type="text"
+                            placeholder="743263"
+                            value={formPostalCode}
+                            onChange={(e) => setFormPostalCode(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Leaflet GPS Map Picker */}
+                      <div className="pt-2">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span>Pinpoint Location on Map:</span>
+                          <span className="text-[10px] font-mono text-emerald-700">
+                            {formGpsCoords?.lat?.toFixed(4)}, {formGpsCoords?.lng?.toFixed(4)}
+                          </span>
+                        </label>
+                        <LocationPicker
+                          coordinates={formGpsCoords}
+                          onChange={(coords) => setFormGpsCoords(coords)}
+                        />
+                      </div>
+
+                      {/* Make Default Address Checkbox */}
+                      <div className="pt-2">
+                        <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={formIsDefault}
+                            onChange={(e) => setFormIsDefault(e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+                          />
+                          <span>Set as default delivery address</span>
+                        </label>
+                      </div>
+
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
-                      <input
-                        type="text"
-                        placeholder="Maharashtra"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
-                      />
+
+                    {/* Action Buttons */}
+                    <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddressSubView('list');
+                          setEditingAddressId(null);
+                        }}
+                        className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>SAVE</span>
+                      </button>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
-                      <input
-                        type="text"
-                        placeholder="400001"
-                        value={postalCode}
-                        onChange={(e) => setPostalCode(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
-                      />
-                    </div>
-                  </div>
 
-                  {/* Leaflet GPS Map Picker */}
-                  <div className="pt-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-                      <span>Pinpoint Location on Map:</span>
-                      <span className="text-[10px] font-mono text-emerald-700">
-                        {gpsCoords?.lat?.toFixed(4)}, {gpsCoords?.lng?.toFixed(4)}
-                      </span>
-                    </label>
-                    <LocationPicker
-                      coordinates={gpsCoords}
-                      onChange={(coords) => setGpsCoords(coords)}
-                    />
-                  </div>
-                </div>
+                  </form>
+                )}
 
-                <div className="pt-4 flex items-center justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('hub')}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Save Address</span>
-                  </button>
-                </div>
-
-              </form>
+              </div>
             )}
 
             {/* ===================== VIEW 3: GET HELP & FAQS ===================== */}
