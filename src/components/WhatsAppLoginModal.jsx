@@ -519,7 +519,7 @@ export const WhatsAppLoginModal = () => {
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4" />
-                    <span>Save Profile & Start Shopping</span>
+                    <span>Save</span>
                   </>
                 )}
               </button>
