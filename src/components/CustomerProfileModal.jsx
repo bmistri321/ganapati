@@ -802,31 +802,19 @@ export const CustomerProfileModal = () => {
 
                     {/* Delivery Address & GPS Details */}
                     <div className="space-y-3 pt-3 border-t border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold text-slate-700">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Street Address / Flat / Building *
                         </label>
-
-                        {/* 📍 Use Current GPS Location Button */}
-                        <button
-                          type="button"
-                          onClick={handleGetGpsLocation}
-                          disabled={isLocating}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 hover:bg-black text-white text-[11px] font-semibold transition-all active:scale-95 cursor-pointer shadow-xs"
-                        >
-                          <Navigation className={`w-3 h-3 ${isLocating ? 'animate-spin' : ''}`} />
-                          <span>{isLocating ? 'Locating...' : '📍 Use Current GPS'}</span>
-                        </button>
+                        <input
+                          type="text"
+                          placeholder="e.g. Station Road, 4no Gali, Near City Hospital"
+                          value={formAddress}
+                          onChange={(e) => setFormAddress(e.target.value)}
+                          className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
+                          required
+                        />
                       </div>
-
-                      <input
-                        type="text"
-                        placeholder="e.g. Station Road, 4no Gali, Near City Hospital"
-                        value={formAddress}
-                        onChange={(e) => setFormAddress(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-xs font-medium rounded-xl bg-[#F4F5F7] border border-transparent focus:border-slate-400 focus:bg-white outline-none transition-all"
-                        required
-                      />
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
@@ -863,15 +851,10 @@ export const CustomerProfileModal = () => {
 
                       {/* Leaflet GPS Map Picker */}
                       <div className="pt-2">
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-                          <span>Pinpoint Location on Map:</span>
-                          <span className="text-[10px] font-mono text-emerald-700">
-                            {formGpsCoords?.lat?.toFixed(4)}, {formGpsCoords?.lng?.toFixed(4)}
-                          </span>
-                        </label>
                         <LocationPicker
                           coordinates={formGpsCoords}
                           onChange={(coords) => setFormGpsCoords(coords)}
+                          label="Pinpoint Location on Map:"
                         />
                       </div>
 
