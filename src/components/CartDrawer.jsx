@@ -70,7 +70,7 @@ export const CartDrawer = () => {
                 <button
                   type="button"
                   onClick={clearCart}
-                  className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                  className="text-xs text-slate-400 hover:text-rose-600 font-semibold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
                 >
                   Clear All
                 </button>
